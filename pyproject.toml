@@ -1,0 +1,19 @@
+[project]
+name = "cajuina-api"
+version = "0.1.0"
+description = "API para Cajuína Seguros"
+requires-python = ">=3.11"
+dependencies = [
+    "django>=4.2,<5.0",
+    "djangorestframework",
+    "djangorestframework-simplejwt",
+    "psycopg2-binary",
+    "django-cors-headers",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest",
+    "pytest-django",
+    "ruff",
+]
