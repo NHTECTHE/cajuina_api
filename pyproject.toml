@@ -9,6 +9,7 @@ dependencies = [
     "djangorestframework-simplejwt",
     "psycopg2-binary",
     "django-cors-headers",
+    "requests",
 ]
 
 [tool.uv]

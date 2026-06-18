@@ -20,9 +20,12 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
+from apps.tomador.views import CnpjProxyView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path("integracoes/cnpj/<str:cnpj>/", CnpjProxyView.as_view(), name="integracoes-cnpj"),
+    path('api/v1/users/', include('apps.users.api.v1.urls')),
 ]
