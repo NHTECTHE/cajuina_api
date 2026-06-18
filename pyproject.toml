@@ -9,6 +9,7 @@ dependencies = [
     "djangorestframework-simplejwt",
     "psycopg2-binary",
     "django-cors-headers",
+    "gunicorn",
 ]
 
 [tool.uv]
@@ -17,3 +18,8 @@ dev-dependencies = [
     "pytest-django",
     "ruff",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# Settings do Django usam idiomas que o ruff sinaliza por padrão:
+# `from .base import *` (F403/F405) e imports após blocos de config (E402).
+"config/settings/*.py" = ["F403", "F405", "E402"]
