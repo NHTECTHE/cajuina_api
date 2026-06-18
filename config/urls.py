@@ -20,7 +20,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-from apps.tomador.views import CnpjProxyView
+from apps.tomadores.views import CnpjProxyView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
