@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+env/
+venv/
+.venv/
+
+# Django
+*.log
+staticfiles/
+media/
+db.sqlite3
+
+# Ambiente / segredos — NUNCA versionar (.env.example é o template)
+.env
+.env.*
+!.env.example
+
+# Ferramentas
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
