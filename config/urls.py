@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path("integracoes/cnpj/<str:cnpj>/", CnpjProxyView.as_view(), name="integracoes-cnpj"),
     path('api/v1/users/', include('apps.users.api.v1.urls')),
+    path('api/v1/tomadores/', include('apps.tomadores.api.v1.urls')),
 ]
