@@ -22,7 +22,7 @@ def create_user(db):
 @pytest.mark.django_db
 class TestAuthAPI:
     def test_obtain_token_pair(self, api_client, create_user):
-        user = create_user(username='testuser', password='testpassword')
+        create_user(username='testuser', password='testpassword')
         url = reverse('token_obtain_pair')
         
         response = api_client.post(url, {
@@ -35,7 +35,7 @@ class TestAuthAPI:
         assert 'refresh' in response.data
 
     def test_obtain_token_pair_invalid_credentials(self, api_client, create_user):
-        user = create_user(username='testuser', password='testpassword')
+        create_user(username='testuser', password='testpassword')
         url = reverse('token_obtain_pair')
         
         response = api_client.post(url, {
@@ -47,7 +47,7 @@ class TestAuthAPI:
         assert 'access' not in response.data
 
     def test_refresh_token(self, api_client, create_user):
-        user = create_user(username='testuser', password='testpassword')
+        create_user(username='testuser', password='testpassword')
         url_obtain = reverse('token_obtain_pair')
         
         response_obtain = api_client.post(url_obtain, {
