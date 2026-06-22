@@ -1,0 +1,10 @@
+Olá, {{ user.first_name }}!
+
+Obrigado por se cadastrar no Cajuína. Para concluir seu cadastro e ativar sua conta, por favor, acesse o link abaixo:
+
+{{ activation_url }}
+
+Se você não se cadastrou em nosso sistema, por favor, ignore este e-mail.
+
+Atenciosamente,
+Equipe Cajuína
