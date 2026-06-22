@@ -3,12 +3,10 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
-from django.core.mail import send_mail
-from django.core.mail import BadHeaderError
+from django.core.mail import BadHeaderError, send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.template.exceptions import TemplateDoesNotExist
-from django.urls import reverse
 
 User = get_user_model()
 
@@ -69,7 +67,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
                 html_message=html_message,
                 fail_silently=False,
             )
-        except (BadHeaderError, Exception) as e:
+        except (BadHeaderError, Exception):
             user.delete()
             raise serializers.ValidationError(
                 "Não foi possível enviar o e-mail de ativação. Tente novamente mais tarde."
