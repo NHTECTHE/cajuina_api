@@ -15,10 +15,19 @@ class SocioSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False,
     )
+    # Sobrescrevemos qualificacao para ignorar o choices_validation se vier dado externo (ex: "10-Diretor")
+    qualificacao = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     class Meta:
         model = Socio
         fields = ["id", "nome", "cpf", "nascimento", "qualificacao"]
+
+    def to_internal_value(self, data):
+        # Transforma strings vazias de nascimento em None
+        if "nascimento" in data and data["nascimento"] == "":
+            data = data.copy()
+            data["nascimento"] = None
+        return super().to_internal_value(data)
 
 
 class TomadorSerializer(serializers.ModelSerializer):
