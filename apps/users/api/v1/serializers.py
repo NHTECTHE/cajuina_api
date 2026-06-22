@@ -4,8 +4,10 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.core.mail import send_mail
+from django.core.mail import BadHeaderError
 from django.conf import settings
 from django.template.loader import render_to_string
+from django.template.exceptions import TemplateDoesNotExist
 from django.urls import reverse
 
 User = get_user_model()
@@ -51,22 +53,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         host = getattr(settings, 'API_HOST', 'http://localhost:8000')
         activation_url = f"{host}/api/v1/users/activate/{uid}/{token}/"
 
-        # Tentar renderizar templates. Caso não existam (ainda), usar string padrão.
         try:
             html_message = render_to_string('users/activation_email.html', {'activation_url': activation_url, 'user': user})
             text_message = render_to_string('users/activation_email.txt', {'activation_url': activation_url, 'user': user})
-        except Exception:
-            # Fallback seguro caso o template não exista no momento do teste inicial
+        except TemplateDoesNotExist:
             text_message = f"Olá, {user.first_name}.\n\nPor favor, ative sua conta através do link:\n{activation_url}"
             html_message = f"<p>Olá, {user.first_name}.</p><p>Por favor, ative sua conta através do link:</p><p><a href='{activation_url}'>Ativar Conta</a></p>"
 
-        send_mail(
-            subject="Ativação de Conta - Cajuína",
-            message=text_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            html_message=html_message,
-            fail_silently=True
-        )
+        try:
+            send_mail(
+                subject="Ativação de Conta - Cajuína",
+                message=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+        except (BadHeaderError, Exception) as e:
+            user.delete()
+            raise serializers.ValidationError(
+                "Não foi possível enviar o e-mail de ativação. Tente novamente mais tarde."
+            )
 
         return user
