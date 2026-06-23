@@ -3,6 +3,6 @@ from .models import Segurado
 
 
 @admin.register(Segurado)
-class SegуradoAdmin(admin.ModelAdmin):
+class SeguradoAdmin(admin.ModelAdmin):
     list_display = ["nome", "cnpj", "cidade", "estado"]
     search_fields = ["nome", "cnpj", "cidade"]
