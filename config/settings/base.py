@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.tomadores',
     'apps.corretores',
+    'apps.segurados',
 ]
 
 MIDDLEWARE = [
