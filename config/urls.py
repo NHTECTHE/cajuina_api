@@ -28,4 +28,5 @@ urlpatterns = [
     path('api/v1/tomadores/', include('apps.tomadores.api.v1.urls')),
     path('api/v1/users/', include('apps.users.api.v1.urls')),
     path('api/v1/corretores/', include('apps.corretores.api.v1.urls')),
+    path('api/v1/segurados/', include('apps.segurados.api.v1.urls')),
 ]
