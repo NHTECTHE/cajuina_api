@@ -42,6 +42,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'apps.users',
     'apps.tomadores',
+    'apps.corretores',
+    'apps.segurados',
+    'apps.produtores',
+    'apps.seguradoras',
 ]
 
 MIDDLEWARE = [
