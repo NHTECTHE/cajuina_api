@@ -3,10 +3,9 @@ from django.db import models
 
 class Corretor(models.Model):
     RECEBIMENTO_CHOICES = [
-        ("pix", "PIX"),
-        ("ted", "TED"),
-        ("doc", "DOC"),
-        ("boleto", "Boleto"),
+        ("lucro", "Lucro"),
+        ("comissao", "Comissão"),
+        ("premio", "Prêmio"),
     ]
 
     cpf_cnpj = models.CharField(max_length=18, unique=True)
