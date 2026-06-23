@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'apps.corretores',
     'apps.segurados',
     'apps.produtores',
+    'apps.seguradoras',
 ]
 
 MIDDLEWARE = [
