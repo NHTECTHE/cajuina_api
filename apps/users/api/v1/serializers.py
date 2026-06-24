@@ -74,3 +74,63 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             )
 
         return user
+
+
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        credential = attrs.get("username", "")
+        if "@" in credential:
+            try:
+                user_obj = User.objects.get(email=credential)
+                attrs["username"] = user_obj.username
+            except User.DoesNotExist:
+                pass
+        return super().validate(attrs)
+
+
+class UserListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ('id', 'first_name', 'email', 'username', 'cargo')
+
+
+class UserAdminSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False)
+
+    class Meta:
+        model = User
+        fields = ('id', 'first_name', 'email', 'username', 'cargo', 'password')
+
+    def validate_username(self, value):
+        qs = User.objects.filter(username=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Este usuário já está cadastrado.")
+        return value
+
+    def validate_email(self, value):
+        qs = User.objects.filter(email=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Este e-mail já está cadastrado.")
+        return value
+
+    def create(self, validated_data):
+        password = validated_data.pop('password', '123456')
+        user = User(**validated_data, is_active=True)
+        user.set_password(password)
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance

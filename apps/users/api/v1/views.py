@@ -1,4 +1,4 @@
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -48,3 +48,66 @@ class UserMeView(APIView):
             "telefone": user.telefone,
             "is_superuser": user.is_superuser,
         })
+
+
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import EmailOrUsernameTokenSerializer
+
+class CustomTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmailOrUsernameTokenSerializer
+
+
+from django.db.models import Q
+from .serializers import UserListSerializer, UserAdminSerializer
+
+def _envelope(data):
+    return {"data": data}
+
+class UserListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        search = request.query_params.get("search", "")
+        qs = User.objects.all().order_by("first_name")
+        if search:
+            qs = qs.filter(
+                Q(first_name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(username__icontains=search)
+            )
+        serializer = UserListSerializer(qs, many=True)
+        return Response(_envelope(serializer.data))
+
+    def post(self, request):
+        serializer = UserAdminSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        out = UserListSerializer(user)
+        return Response(_envelope(out.data), status=status.HTTP_201_CREATED)
+
+
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def _get_object(self, pk):
+        from rest_framework.exceptions import NotFound
+        try:
+            return User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            raise NotFound(detail="Usuário não encontrado.")
+
+    def get(self, request, pk):
+        user = self._get_object(pk)
+        return Response(_envelope(UserListSerializer(user).data))
+
+    def patch(self, request, pk):
+        user = self._get_object(pk)
+        serializer = UserAdminSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(_envelope(UserListSerializer(user).data))
+
+    def delete(self, request, pk):
+        user = self._get_object(pk)
+        user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
