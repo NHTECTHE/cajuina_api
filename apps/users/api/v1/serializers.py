@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
 from django.core.mail import BadHeaderError, send_mail
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -134,3 +134,65 @@ class UserAdminSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+class PasswordResetSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def save(self):
+        email = self.validated_data['email']
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        reset_url = f"{frontend_url}/redefinir-senha?uid={uid}&token={token}"
+        
+        try:
+            html_message = render_to_string('users/password_reset_email.html', {'reset_url': reset_url, 'user': user})
+            text_message = render_to_string('users/password_reset_email.txt', {'reset_url': reset_url, 'user': user})
+        except TemplateDoesNotExist:
+            text_message = f"Olá, {user.first_name}.\n\nVocê solicitou a redefinição da sua senha. Acesse o link abaixo para criar uma nova senha:\n{reset_url}\n\nSe você não solicitou, por favor ignore este e-mail."
+            html_message = f"<p>Olá, {user.first_name}.</p><p>Você solicitou a redefinição da sua senha. Acesse o link abaixo para criar uma nova senha:</p><p><a href='{reset_url}'>Redefinir Senha</a></p><p>Se você não solicitou, por favor ignore este e-mail.</p>"
+
+        try:
+            send_mail(
+                subject="Redefinição de Senha - Cajuína",
+                message=text_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                html_message=html_message,
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending password reset email: {e}")
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(min_length=8)
+    confirm_password = serializers.CharField(min_length=8)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "As senhas não coincidem."})
+
+        try:
+            uid = force_str(urlsafe_base64_decode(attrs['uidb64']))
+            user = User.objects.get(pk=uid)
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            raise serializers.ValidationError({"error": "Link inválido ou expirado."})
+
+        if not default_token_generator.check_token(user, attrs['token']):
+            raise serializers.ValidationError({"error": "Link inválido ou expirado."})
+
+        self.user = user
+        return attrs
+
+    def save(self):
+        self.user.set_password(self.validated_data['new_password'])
+        self.user.save()
+
