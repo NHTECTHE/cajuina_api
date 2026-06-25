@@ -29,4 +29,6 @@ urlpatterns = [
     path('api/v1/segurados/', include('apps.segurados.api.v1.urls')),
     path('api/v1/produtores/', include('apps.produtores.api.v1.urls')),
     path('api/v1/seguradoras/', include('apps.seguradoras.api.v1.urls')),
+    path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
+    path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
 ]
