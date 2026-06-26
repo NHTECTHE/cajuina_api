@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'apps.segurados',
     'apps.produtores',
     'apps.seguradoras',
+    'apps.modalidades',
+    'apps.alterar_senha',
 ]
 
 MIDDLEWARE = [
