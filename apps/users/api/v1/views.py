@@ -78,6 +78,29 @@ from .serializers import EmailOrUsernameTokenSerializer
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenSerializer
 
+    def post(self, request, *args, **kwargs):
+        res = super().post(request, *args, **kwargs)
+        if res.status_code == 200:
+            try:
+                username = request.data.get("username", "")
+                user_obj = None
+                if "@" in username:
+                    user_obj = User.objects.filter(email=username).first()
+                if not user_obj:
+                    user_obj = User.objects.filter(username=username).first()
+                if user_obj:
+                    from apps.atividades.services import atividade_create
+                    atividade_create(
+                        usuario=user_obj,
+                        acao="LOGIN",
+                        entidade="Autenticacao",
+                        item=f"{user_obj.first_name if user_obj.first_name else user_obj.username}",
+                        detalhes="Status: sucesso | Origem: web | HTTP: 200"
+                    )
+            except Exception as e:
+                print(f"Error logging login: {e}")
+        return res
+
 
 from django.db.models import Q
 from .serializers import UserListSerializer, UserAdminSerializer
