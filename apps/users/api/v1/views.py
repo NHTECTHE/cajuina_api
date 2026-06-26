@@ -8,7 +8,11 @@ from django.utils.http import urlsafe_base64_decode
 from django.shortcuts import redirect
 from django.conf import settings
 
-from .serializers import UserRegistrationSerializer
+from .serializers import (
+    UserRegistrationSerializer,
+    PasswordResetSerializer,
+    PasswordResetConfirmSerializer
+)
 
 User = get_user_model()
 
@@ -34,6 +38,24 @@ class UserActivationView(APIView):
             return redirect(f"{frontend_url}/?activation=success")
         else:
             return redirect(f"{frontend_url}/?activation=error")
+
+class PasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Se o e-mail estiver cadastrado, você receberá um link de recuperação."}, status=status.HTTP_200_OK)
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Senha atualizada com sucesso."}, status=status.HTTP_200_OK)
 
 class UserMeView(APIView):
     permission_classes = [IsAuthenticated]
