@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
@@ -75,8 +76,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         return user
 
-
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):

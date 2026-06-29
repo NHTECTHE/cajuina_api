@@ -2,13 +2,15 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework_simplejwt.views import TokenObtainPairView
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_decode
 from django.shortcuts import redirect
 from django.conf import settings
+from django.db.models import Q
 
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer, EmailOrUsernameTokenSerializer, UserListSerializer, UserAdminSerializer
 
 User = get_user_model()
 
@@ -50,15 +52,9 @@ class UserMeView(APIView):
         })
 
 
-from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import EmailOrUsernameTokenSerializer
-
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenSerializer
 
-
-from django.db.models import Q
-from .serializers import UserListSerializer, UserAdminSerializer
 
 def _envelope(data):
     return {"data": data}

@@ -122,7 +122,7 @@ class TestLoginEmailOuUsername:
 def auth_client_user(db):
     from rest_framework.test import APIClient
     client = APIClient()
-    admin = User.objects.create_user(username="admin", email="admin@t.com", password="admin123")
+    User.objects.create_user(username="admin", email="admin@t.com", password="admin123")
     resp = client.post(reverse("token_obtain_pair"), {"username": "admin", "password": "admin123"}, format="json")
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
