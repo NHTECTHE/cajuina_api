@@ -16,14 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
+from rest_framework_simplejwt.views import TokenRefreshView
+from apps.users.api.v1.views import CustomTokenObtainPairView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/auth/login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/v1/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/v1/tomadores/', include('apps.tomadores.api.v1.urls')),
     path('api/v1/users/', include('apps.users.api.v1.urls')),
@@ -31,4 +29,7 @@ urlpatterns = [
     path('api/v1/segurados/', include('apps.segurados.api.v1.urls')),
     path('api/v1/produtores/', include('apps.produtores.api.v1.urls')),
     path('api/v1/seguradoras/', include('apps.seguradoras.api.v1.urls')),
+    path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
+    path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
+    path('api/v1/atividades/', include('apps.atividades.urls')),
 ]
