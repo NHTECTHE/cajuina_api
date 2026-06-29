@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     'apps.segurados',
     'apps.produtores',
     'apps.seguradoras',
+    'apps.modalidades',
+    'apps.alterar_senha',
+    'apps.atividades',
 ]
 
 MIDDLEWARE = [
@@ -57,6 +60,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.atividades.middleware.CurrentUserMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

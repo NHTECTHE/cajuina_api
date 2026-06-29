@@ -10,7 +10,14 @@ from django.shortcuts import redirect
 from django.conf import settings
 from django.db.models import Q
 
-from .serializers import UserRegistrationSerializer, EmailOrUsernameTokenSerializer, UserListSerializer, UserAdminSerializer
+from .serializers import (
+    UserRegistrationSerializer,
+    EmailOrUsernameTokenSerializer,
+    UserListSerializer,
+    UserAdminSerializer,
+    PasswordResetSerializer,
+    PasswordResetConfirmSerializer,
+)
 
 User = get_user_model()
 
@@ -37,6 +44,24 @@ class UserActivationView(APIView):
         else:
             return redirect(f"{frontend_url}/?activation=error")
 
+class PasswordResetView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Se o e-mail estiver cadastrado, você receberá um link de recuperação."}, status=status.HTTP_200_OK)
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Senha atualizada com sucesso."}, status=status.HTTP_200_OK)
+
 class UserMeView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -54,6 +79,29 @@ class UserMeView(APIView):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailOrUsernameTokenSerializer
+
+    def post(self, request, *args, **kwargs):
+        res = super().post(request, *args, **kwargs)
+        if res.status_code == 200:
+            try:
+                username = request.data.get("username", "")
+                user_obj = None
+                if "@" in username:
+                    user_obj = User.objects.filter(email=username).first()
+                if not user_obj:
+                    user_obj = User.objects.filter(username=username).first()
+                if user_obj:
+                    from apps.atividades.services import atividade_create
+                    atividade_create(
+                        usuario=user_obj,
+                        acao="LOGIN",
+                        entidade="Autenticacao",
+                        item=f"{user_obj.first_name if user_obj.first_name else user_obj.username}",
+                        detalhes="Status: sucesso | Origem: web | HTTP: 200"
+                    )
+            except Exception as e:
+                print(f"Error logging login: {e}")
+        return res
 
 
 def _envelope(data):
