@@ -4,8 +4,9 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Seguradora(models.Model):
     nome = models.CharField(max_length=255)
-    valor_licitacao = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
-    valor_execucao = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    logo = models.ImageField(upload_to="seguradoras/logos/", null=True, blank=True)
+    meta = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
+    premio_minimo = models.DecimalField(max_digits=14, decimal_places=2)
     taxa_comissao = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     dia_vencimento = models.PositiveSmallIntegerField(
         null=True,

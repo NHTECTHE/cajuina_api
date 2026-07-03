@@ -31,8 +31,8 @@ def auth_client(client, user):
 def seguradora(db):
     return Seguradora.objects.create(
         nome="Seguradora Teste",
-        valor_licitacao="1000000.00",
-        valor_execucao="500000.00",
+        meta="1000000.00",
+        premio_minimo="500000.00",
         taxa_comissao="5.00",
         dia_vencimento=15,
     )
@@ -70,7 +70,11 @@ class TestSeguradoraAutenticacao:
 @pytest.mark.django_db
 class TestSeguradoraCamposObrigatorios:
     def test_criar_sem_nome_retorna_400(self, auth_client, db):
-        resp = auth_client.post(reverse("seguradora-list-create"), {}, format="json")
+        resp = auth_client.post(reverse("seguradora-list-create"), {"premio_minimo": "100.00"}, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_criar_sem_premio_minimo_retorna_400(self, auth_client, db):
+        resp = auth_client.post(reverse("seguradora-list-create"), {"nome": "Seg X"}, format="json")
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
@@ -112,18 +116,18 @@ class TestSeguradoraValidacoes:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_valor_licitacao_negativo_retorna_400(self, auth_client, db):
+    def test_meta_negativa_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("seguradora-list-create"),
-            {"nome": "Seg X", "valor_licitacao": "-100.00"},
+            {"nome": "Seg X", "meta": "-100.00", "premio_minimo": "100.00"},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_valor_execucao_negativo_retorna_400(self, auth_client, db):
+    def test_premio_minimo_negativo_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("seguradora-list-create"),
-            {"nome": "Seg X", "valor_execucao": "-100.00"},
+            {"nome": "Seg X", "premio_minimo": "-100.00"},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -131,13 +135,12 @@ class TestSeguradoraValidacoes:
     def test_campos_opcionais_nulos_sao_aceitos(self, auth_client, db):
         resp = auth_client.post(
             reverse("seguradora-list-create"),
-            {"nome": "Seg Mínima"},
+            {"nome": "Seg Mínima", "premio_minimo": "100.00"},
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
         data = resp.data["data"]
-        assert data["valor_licitacao"] is None
-        assert data["valor_execucao"] is None
+        assert data["meta"] is None
         assert data["taxa_comissao"] is None
         assert data["dia_vencimento"] is None
 
@@ -196,8 +199,8 @@ class TestSeguradoraCRUD:
             reverse("seguradora-list-create"),
             {
                 "nome": "Nova Seguradora",
-                "valor_licitacao": "2000000.00",
-                "valor_execucao": "1500000.00",
+                "meta": "2000000.00",
+                "premio_minimo": "1500000.00",
                 "taxa_comissao": "3.50",
                 "dia_vencimento": 10,
                 "ativo": True,
