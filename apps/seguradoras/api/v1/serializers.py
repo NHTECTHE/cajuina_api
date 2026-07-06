@@ -35,6 +35,10 @@ class SeguradoraSerializer(serializers.ModelSerializer):
             "taxa_comissao",
             "dia_vencimento",
             "ativo",
+            "api_usuario",
+            "api_senha",
+            "api_ou_name",
+            "api_source_app",
             "criado_em",
             "atualizado_em",
         ]

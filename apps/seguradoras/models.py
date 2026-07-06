@@ -14,6 +14,13 @@ class Seguradora(models.Model):
         validators=[MinValueValidator(1), MaxValueValidator(31)],
     )
     ativo = models.BooleanField(default=True)
+
+    # Credenciais de integração com a API externa da seguradora
+    api_usuario = models.CharField(max_length=255, blank=True, default="")
+    api_senha = models.CharField(max_length=255, blank=True, default="")
+    api_ou_name = models.CharField(max_length=255, blank=True, default="", verbose_name="OUName")
+    api_source_app = models.CharField(max_length=255, blank=True, default="", verbose_name="SourceApp")
+
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 
