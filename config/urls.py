@@ -36,5 +36,6 @@ urlpatterns = [
     path('api/v1/atividades/', include('apps.atividades.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Servido pelo próprio Django em qualquer ambiente: o nginx da VPS faz proxy_pass
+# de tudo para o Django, então não há bloco `location /media/` dedicado no nginx.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

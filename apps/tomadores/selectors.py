@@ -1,5 +1,5 @@
 from django.db.models import Q, QuerySet
-from .models import Tomador
+from .models import Tomador, TomadorArquivo
 
 
 def tomador_list(
@@ -30,3 +30,11 @@ def tomador_list(
 
 def tomador_get(*, pk: int) -> Tomador:
     return Tomador.objects.prefetch_related("contatos_adicionais", "socios").get(pk=pk)
+
+
+def tomador_arquivo_list(*, tomador_id: int) -> QuerySet[TomadorArquivo]:
+    return TomadorArquivo.objects.filter(tomador_id=tomador_id)
+
+
+def tomador_arquivo_get(*, tomador_id: int, pk: int) -> TomadorArquivo:
+    return TomadorArquivo.objects.get(tomador_id=tomador_id, pk=pk)

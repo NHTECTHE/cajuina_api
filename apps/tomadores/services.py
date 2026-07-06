@@ -1,4 +1,4 @@
-from .models import Tomador, ContatoAdicional, Socio
+from .models import Tomador, ContatoAdicional, Socio, TomadorArquivo
 
 
 def tomador_create(*, data: dict) -> Tomador:
@@ -46,3 +46,17 @@ def _sync_socios(tomador: Tomador, socios: list[dict]) -> None:
     Socio.objects.bulk_create([
         Socio(tomador=tomador, **s) for s in socios
     ])
+
+
+def tomador_arquivo_create(*, tomador: Tomador, arquivo) -> TomadorArquivo:
+    return TomadorArquivo.objects.create(
+        tomador=tomador,
+        arquivo=arquivo,
+        nome_original=arquivo.name,
+        tamanho=arquivo.size,
+    )
+
+
+def tomador_arquivo_delete(*, arquivo: TomadorArquivo) -> None:
+    arquivo.arquivo.delete(save=False)
+    arquivo.delete()

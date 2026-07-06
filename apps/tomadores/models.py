@@ -63,6 +63,27 @@ class ContatoAdicional(models.Model):
         return f"{self.nome} — {self.tomador.nome}"
 
 
+class TomadorArquivo(models.Model):
+    tomador = models.ForeignKey(
+        Tomador,
+        on_delete=models.CASCADE,
+        related_name="arquivos",
+    )
+    arquivo = models.FileField(upload_to="tomadores/arquivos/%Y/%m/")
+    nome_original = models.CharField(max_length=255, blank=True, default="")
+    tamanho = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "tomadores_arquivos"
+        ordering = ["-criado_em"]
+        verbose_name = "Arquivo do Tomador"
+        verbose_name_plural = "Arquivos do Tomador"
+
+    def __str__(self):
+        return f"{self.nome_original} — {self.tomador.nome}"
+
+
 class Socio(models.Model):
     QUALIFICACAO_CHOICES = [
         ("Sócio Administrador", "Sócio Administrador"),
