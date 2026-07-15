@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'apps.modalidades',
     'apps.alterar_senha',
     'apps.atividades',
+    'apps.notificacoes',
 ]
 
 MIDDLEWARE = [

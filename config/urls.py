@@ -34,6 +34,7 @@ urlpatterns = [
     path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
     path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
     path('api/v1/atividades/', include('apps.atividades.urls')),
+    path('api/v1/notificacoes/', include('apps.notificacoes.api.v1.urls')),
 ]
 
 # Servido pelo próprio Django em qualquer ambiente: o nginx da VPS faz proxy_pass
