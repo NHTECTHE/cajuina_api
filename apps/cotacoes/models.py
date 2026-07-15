@@ -9,9 +9,11 @@ from apps.tomadores.models import Tomador
 class Cotacao(models.Model):
     STATUS_INICIADO = "Iniciado"
     STATUS_APROVADO = "Aprovado"
+    STATUS_EMITIDO = "Emitido"
     STATUS_CHOICES = [
         (STATUS_INICIADO, "Iniciado"),
         (STATUS_APROVADO, "Aprovado"),
+        (STATUS_EMITIDO, "Emitido"),
     ]
 
     status = models.CharField(

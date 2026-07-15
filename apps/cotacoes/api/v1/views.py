@@ -21,7 +21,8 @@ class CotacaoListCreateView(APIView):
 
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
-        cotacoes = selectors.cotacao_list(search=search)
+        status_param = request.query_params.get("status", "")
+        cotacoes = selectors.cotacao_list(search=search, status=status_param)
         serializer = CotacaoSerializer(cotacoes, many=True)
         return Response(_envelope(serializer.data))
 

@@ -11,7 +11,7 @@ def _base_qs():
     )
 
 
-def cotacao_list(*, search: str = "") -> Iterable[Cotacao]:
+def cotacao_list(*, search: str = "", status: str = "") -> Iterable[Cotacao]:
     qs = _base_qs()
     if search:
         qs = qs.filter(
@@ -20,6 +20,8 @@ def cotacao_list(*, search: str = "") -> Iterable[Cotacao]:
             | Q(modalidade__nome__icontains=search)
             | Q(edital__icontains=search)
         )
+    if status:
+        qs = qs.filter(status=status)
     return qs
 
 

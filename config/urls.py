@@ -33,6 +33,7 @@ urlpatterns = [
     path('api/v1/seguradoras/', include('apps.seguradoras.api.v1.urls')),
     path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
     path('api/v1/cotacoes/', include('apps.cotacoes.api.v1.urls')),
+    path('api/v1/apolices/', include('apps.apolices.api.v1.urls')),
     path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
     path('api/v1/atividades/', include('apps.atividades.urls')),
 ]
