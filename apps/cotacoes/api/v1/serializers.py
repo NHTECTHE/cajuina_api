@@ -1,0 +1,56 @@
+from rest_framework import serializers
+
+from apps.cotacoes.models import Cotacao
+from apps.modalidades.models import Modalidade
+from apps.segurados.models import Segurado
+from apps.tomadores.models import Tomador
+
+
+class CotacaoSerializer(serializers.ModelSerializer):
+    # Escrita: recebe apenas os IDs das FKs.
+    tomador = serializers.PrimaryKeyRelatedField(queryset=Tomador.objects.all())
+    modalidade = serializers.PrimaryKeyRelatedField(queryset=Modalidade.objects.all())
+    segurado = serializers.PrimaryKeyRelatedField(
+        queryset=Segurado.objects.all(), required=False, allow_null=True
+    )
+
+    # Leitura: dados prontos para a lista/detalhe do frontend.
+    tomador_nome = serializers.CharField(source="tomador.nome", read_only=True)
+    tomador_cnpj = serializers.CharField(source="tomador.cnpj", read_only=True)
+    modalidade_nome = serializers.CharField(source="modalidade.nome", read_only=True)
+    segurado_nome = serializers.CharField(source="segurado.nome", read_only=True, default=None)
+    segurado_cnpj = serializers.CharField(source="segurado.cnpj", read_only=True, default=None)
+    criado_por_nome = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cotacao
+        fields = (
+            "id",
+            "status",
+            "tomador",
+            "tomador_nome",
+            "tomador_cnpj",
+            "modalidade",
+            "modalidade_nome",
+            "segurado",
+            "segurado_nome",
+            "segurado_cnpj",
+            "edital",
+            "data_inicio",
+            "prazo_dias",
+            "data_final",
+            "importancia_segurada",
+            "observacoes",
+            "criado_por",
+            "criado_por_nome",
+            "criado_em",
+            "atualizado_em",
+        )
+        read_only_fields = ("id", "status", "criado_por", "criado_em", "atualizado_em")
+
+    def get_criado_por_nome(self, obj) -> str | None:
+        user = obj.criado_por
+        if not user:
+            return None
+        full_name = user.get_full_name() if hasattr(user, "get_full_name") else ""
+        return full_name or getattr(user, "username", None) or getattr(user, "email", None)

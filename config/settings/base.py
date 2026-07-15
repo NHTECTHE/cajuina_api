@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'apps.produtores',
     'apps.seguradoras',
     'apps.modalidades',
+    'apps.cotacoes',
     'apps.alterar_senha',
     'apps.atividades',
 ]
