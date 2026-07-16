@@ -157,13 +157,13 @@ class TestSeguradoraCRUD:
         assert len(resp.data["data"]) == 1
 
     def test_busca_por_nome(self, auth_client, seguradora, db):
-        Seguradora.objects.create(nome="Outra Totalmente Diferente")
+        Seguradora.objects.create(nome="Outra Totalmente Diferente", premio_minimo="100.00")
         resp = auth_client.get(reverse("seguradora-list-create"), {"search": "Seguradora Teste"})
         assert resp.status_code == status.HTTP_200_OK
         assert all("Seguradora Teste" in s["nome"] for s in resp.data["data"])
 
     def test_filtro_ativo(self, auth_client, seguradora, db):
-        Seguradora.objects.create(nome="Inativa", ativo=False)
+        Seguradora.objects.create(nome="Inativa", ativo=False, premio_minimo="100.00")
         resp = auth_client.get(reverse("seguradora-list-create"), {"ativo": "true"})
         assert resp.status_code == status.HTTP_200_OK
         assert all(s["ativo"] for s in resp.data["data"])
