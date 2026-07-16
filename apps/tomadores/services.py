@@ -1,5 +1,8 @@
-from .models import Tomador, ContatoAdicional, Socio
+from .models import Tomador, ContatoAdicional, Socio, TomadorArquivo
 
+
+from apps.notificacoes.models import Notificacao
+from django.contrib.auth import get_user_model
 
 def tomador_create(*, data: dict) -> Tomador:
     contatos = data.pop("contatos_adicionais", [])
@@ -9,6 +12,19 @@ def tomador_create(*, data: dict) -> Tomador:
 
     _sync_contatos(tomador, contatos)
     _sync_socios(tomador, socios)
+
+    # Notify admins
+    # Notify all users
+    User = get_user_model()
+    users_to_notify = User.objects.all()
+    nome_exibicao = tomador.nome_fantasia if tomador.nome_fantasia else tomador.nome
+    for user in users_to_notify:
+        Notificacao.objects.create(
+            usuario=user,
+            titulo="Novo tomador cadastrado",
+            status_badge="NOVO",
+            mensagem=nome_exibicao
+        )
 
     return tomador
 
@@ -46,3 +62,17 @@ def _sync_socios(tomador: Tomador, socios: list[dict]) -> None:
     Socio.objects.bulk_create([
         Socio(tomador=tomador, **s) for s in socios
     ])
+
+
+def tomador_arquivo_create(*, tomador: Tomador, arquivo) -> TomadorArquivo:
+    return TomadorArquivo.objects.create(
+        tomador=tomador,
+        arquivo=arquivo,
+        nome_original=arquivo.name,
+        tamanho=arquivo.size,
+    )
+
+
+def tomador_arquivo_delete(*, arquivo: TomadorArquivo) -> None:
+    arquivo.arquivo.delete(save=False)
+    arquivo.delete()

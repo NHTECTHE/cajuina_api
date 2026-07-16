@@ -1,4 +1,5 @@
 from rest_framework import status
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,24 +16,26 @@ def _envelope(data) -> dict:
 
 class SeguradoraListCreateView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
         ativo = request.query_params.get("ativo", "")
         seguradoras = selectors.seguradora_list(search=search, ativo=ativo)
-        serializer = SeguradoraSerializer(seguradoras, many=True)
+        serializer = SeguradoraSerializer(seguradoras, many=True, context={"request": request})
         return Response(_envelope(serializer.data))
 
     def post(self, request: Request) -> Response:
-        serializer = SeguradoraSerializer(data=request.data)
+        serializer = SeguradoraSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         seguradora = services.seguradora_create(data=serializer.validated_data)
-        out = SeguradoraSerializer(seguradora)
+        out = SeguradoraSerializer(seguradora, context={"request": request})
         return Response(_envelope(out.data), status=status.HTTP_201_CREATED)
 
 
 class SeguradoraDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
 
     def _get_object(self, pk: int) -> Seguradora:
         try:
@@ -43,15 +46,15 @@ class SeguradoraDetailView(APIView):
 
     def get(self, request: Request, pk: int) -> Response:
         seguradora = self._get_object(pk)
-        serializer = SeguradoraSerializer(seguradora)
+        serializer = SeguradoraSerializer(seguradora, context={"request": request})
         return Response(_envelope(serializer.data))
 
     def patch(self, request: Request, pk: int) -> Response:
         seguradora = self._get_object(pk)
-        serializer = SeguradoraSerializer(seguradora, data=request.data, partial=True)
+        serializer = SeguradoraSerializer(seguradora, data=request.data, partial=True, context={"request": request})
         serializer.is_valid(raise_exception=True)
         seguradora = services.seguradora_update(seguradora=seguradora, data=serializer.validated_data)
-        out = SeguradoraSerializer(seguradora)
+        out = SeguradoraSerializer(seguradora, context={"request": request})
         return Response(_envelope(out.data))
 
     def delete(self, request: Request, pk: int) -> Response:

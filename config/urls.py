@@ -14,6 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework_simplejwt.views import TokenRefreshView
@@ -30,6 +32,13 @@ urlpatterns = [
     path('api/v1/produtores/', include('apps.produtores.api.v1.urls')),
     path('api/v1/seguradoras/', include('apps.seguradoras.api.v1.urls')),
     path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
+    path('api/v1/cotacoes/', include('apps.cotacoes.api.v1.urls')),
+    path('api/v1/apolices/', include('apps.apolices.api.v1.urls')),
     path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
     path('api/v1/atividades/', include('apps.atividades.urls')),
+    path('api/v1/notificacoes/', include('apps.notificacoes.api.v1.urls')),
 ]
+
+# Servido pelo próprio Django em qualquer ambiente: o nginx da VPS faz proxy_pass
+# de tudo para o Django, então não há bloco `location /media/` dedicado no nginx.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

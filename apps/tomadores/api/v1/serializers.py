@@ -1,5 +1,19 @@
 from rest_framework import serializers
-from apps.tomadores.models import Tomador, ContatoAdicional, Socio
+from apps.tomadores.models import Tomador, ContatoAdicional, Socio, TomadorArquivo
+
+MAX_ARQUIVO_SIZE = 20 * 1024 * 1024  # 20MB
+
+
+class TomadorArquivoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TomadorArquivo
+        fields = ["id", "arquivo", "nome_original", "tamanho", "criado_em"]
+        read_only_fields = ["id", "nome_original", "tamanho", "criado_em"]
+
+    def validate_arquivo(self, value):
+        if value.size > MAX_ARQUIVO_SIZE:
+            raise serializers.ValidationError("Arquivo excede o tamanho máximo de 20MB.")
+        return value
 
 
 class ContatoAdicionalSerializer(serializers.ModelSerializer):

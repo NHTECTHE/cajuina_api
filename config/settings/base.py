@@ -47,8 +47,11 @@ INSTALLED_APPS = [
     'apps.produtores',
     'apps.seguradoras',
     'apps.modalidades',
+    'apps.cotacoes',
+    'apps.apolices',
     'apps.alterar_senha',
     'apps.atividades',
+    'apps.notificacoes',
 ]
 
 MIDDLEWARE = [
@@ -136,6 +139,15 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = 'media/'
+
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Suporta upload de arquivos do tomador em memória até 20MB antes de usar arquivo
+# temporário em disco (default do Django é 2.5MB).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
