@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.apolices',
     'apps.alterar_senha',
     'apps.atividades',
+    'apps.notificacoes',
 ]
 
 MIDDLEWARE = [
