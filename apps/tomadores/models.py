@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -82,6 +85,89 @@ class TomadorArquivo(models.Model):
 
     def __str__(self):
         return f"{self.nome_original} — {self.tomador.nome}"
+
+
+class TomadorSeguradora(models.Model):
+    """Condições comerciais de um tomador em uma seguradora.
+
+    Cada seguradora analisa o CNPJ do tomador e chega a uma taxa própria, então
+    o mesmo tomador tem condições diferentes em cada uma. A taxa é o interruptor:
+    zero deixa a seguradora fora das cotações, qualquer valor positivo habilita.
+
+    `premio_minimo` e `dias_vencimento` em branco herdam o valor da seguradora —
+    são política comercial dela, não avaliação de risco do tomador.
+    """
+
+    tomador = models.ForeignKey(
+        Tomador,
+        on_delete=models.CASCADE,
+        related_name="seguradoras",
+    )
+    seguradora = models.ForeignKey(
+        "seguradoras.Seguradora",
+        on_delete=models.PROTECT,
+        related_name="tomadores",
+    )
+
+    taxa = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        help_text="Zero deixa a seguradora fora das cotações deste tomador.",
+    )
+    premio_minimo = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(0)],
+        help_text="Em branco usa o prêmio mínimo da seguradora.",
+    )
+    dias_vencimento = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Em branco usa o dia de vencimento da seguradora.",
+    )
+
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tomadores_seguradoras"
+        ordering = ["seguradora__nome"]
+        verbose_name = "Seguradora do Tomador"
+        verbose_name_plural = "Seguradoras do Tomador"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["tomador", "seguradora"],
+                name="uniq_tomador_seguradora",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.tomador.nome} — {self.seguradora.nome}: {self.taxa}%"
+
+    @property
+    def apto(self) -> bool:
+        """Se este par pode ser usado em cotações."""
+        # Decimal() porque a instância pode carregar a taxa como str antes de
+        # passar pelo banco (ex.: objects.create(taxa="1.50")).
+        return Decimal(self.taxa) > 0
+
+    @property
+    def premio_minimo_efetivo(self):
+        """Piso a aplicar: o do par, ou o da seguradora quando não definido."""
+        if self.premio_minimo is not None:
+            return self.premio_minimo
+        return self.seguradora.premio_minimo
+
+    @property
+    def dias_vencimento_efetivo(self):
+        """Vencimento a aplicar: o do par, ou o da seguradora quando não definido."""
+        if self.dias_vencimento is not None:
+            return self.dias_vencimento
+        return self.seguradora.dia_vencimento
 
 
 class Socio(models.Model):
