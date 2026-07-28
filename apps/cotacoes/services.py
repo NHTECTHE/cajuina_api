@@ -1,16 +1,60 @@
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Dict, Optional
 
 from django.core.exceptions import ValidationError
 
 from .models import Cotacao
 from apps.notificacoes.models import Notificacao
+from apps.tomadores.models import TomadorSeguradora
 from django.contrib.auth import get_user_model
+
+DIAS_NO_ANO = Decimal("365")
+
+
+def _quantizar(valor) -> Decimal:
+    return Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def cotacao_calcular_premio(*, cotacao: Cotacao) -> Optional[Decimal]:
+    """Prêmio pro rata temporis da cotação.
+
+    (importancia_segurada / 365) * (taxa / 100) * prazo_dias, com piso no
+    prêmio mínimo do par tomador x seguradora (que por sua vez herda o da
+    seguradora quando não definido).
+
+    Retorna None quando não há seguradora escolhida ou faltam dados de cálculo.
+    """
+    if cotacao.seguradora_id is None:
+        return None
+
+    try:
+        vinculo = TomadorSeguradora.objects.get(
+            tomador_id=cotacao.tomador_id, seguradora_id=cotacao.seguradora_id
+        )
+        taxa = vinculo.taxa
+        premio_minimo = vinculo.premio_minimo_efetivo
+    except TomadorSeguradora.DoesNotExist:
+        # Sem condições cadastradas para o par: não há taxa, só o piso da seguradora.
+        taxa = None
+        premio_minimo = cotacao.seguradora.premio_minimo
+
+    if cotacao.importancia_segurada is None or not cotacao.prazo_dias:
+        # Sem base de cálculo não há prêmio a apurar; o piso sozinho não é cotação.
+        return None if taxa is not None else _quantizar(premio_minimo)
+
+    calculado = (
+        (Decimal(cotacao.importancia_segurada) / DIAS_NO_ANO)
+        * (Decimal(taxa or 0) / Decimal("100"))
+        * Decimal(cotacao.prazo_dias)
+    )
+    return _quantizar(max(calculado, Decimal(premio_minimo)))
 
 
 def cotacao_create(*, data: Dict[str, Any], criado_por: Optional[object] = None) -> Cotacao:
     cotacao = Cotacao(**data)
     if criado_por is not None and getattr(criado_por, "is_authenticated", False):
         cotacao.criado_por = criado_por
+    cotacao.premio = cotacao_calcular_premio(cotacao=cotacao)
     cotacao.save()
 
     User = get_user_model()
@@ -30,6 +74,8 @@ def cotacao_create(*, data: Dict[str, Any], criado_por: Optional[object] = None)
 def cotacao_update(*, cotacao: Cotacao, data: Dict[str, Any]) -> Cotacao:
     for field, value in data.items():
         setattr(cotacao, field, value)
+    # A seguradora, a IS e o prazo alimentam o prêmio: recalcula a cada alteração.
+    cotacao.premio = cotacao_calcular_premio(cotacao=cotacao)
     cotacao.save()
     return cotacao
 
