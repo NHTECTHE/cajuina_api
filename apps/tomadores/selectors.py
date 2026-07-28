@@ -1,5 +1,6 @@
 from django.db.models import Q, QuerySet
-from .models import Tomador, TomadorArquivo
+
+from .models import Tomador, TomadorArquivo, TomadorSeguradora
 
 
 def tomador_list(
@@ -38,3 +39,24 @@ def tomador_arquivo_list(*, tomador_id: int) -> QuerySet[TomadorArquivo]:
 
 def tomador_arquivo_get(*, tomador_id: int, pk: int) -> TomadorArquivo:
     return TomadorArquivo.objects.get(tomador_id=tomador_id, pk=pk)
+
+
+def tomador_seguradora_list(*, tomador_id: int) -> QuerySet[TomadorSeguradora]:
+    return TomadorSeguradora.objects.filter(
+        tomador_id=tomador_id
+    ).select_related("seguradora")
+
+
+def tomador_seguradora_get(*, tomador_id: int, seguradora_id: int) -> TomadorSeguradora:
+    return TomadorSeguradora.objects.select_related("seguradora").get(
+        tomador_id=tomador_id, seguradora_id=seguradora_id
+    )
+
+
+def tomador_seguradora_aptas(*, tomador_id: int) -> QuerySet[TomadorSeguradora]:
+    """Pares utilizáveis em cotação: taxa positiva e seguradora ativa."""
+    return TomadorSeguradora.objects.filter(
+        tomador_id=tomador_id,
+        taxa__gt=0,
+        seguradora__ativo=True,
+    ).select_related("seguradora")

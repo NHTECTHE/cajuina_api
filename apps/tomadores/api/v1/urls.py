@@ -1,9 +1,12 @@
 from django.urls import path
+
 from .views import (
-    TomadorListCreateView,
-    TomadorDetailView,
-    TomadorArquivoListCreateView,
     TomadorArquivoDetailView,
+    TomadorArquivoListCreateView,
+    TomadorDetailView,
+    TomadorListCreateView,
+    TomadorSeguradoraDetailView,
+    TomadorSeguradoraListView,
 )
 
 urlpatterns = [
@@ -18,5 +21,15 @@ urlpatterns = [
         "<int:tomador_pk>/arquivos/<int:pk>/",
         TomadorArquivoDetailView.as_view(),
         name="tomador-arquivo-detail",
+    ),
+    path(
+        "<int:tomador_pk>/seguradoras/",
+        TomadorSeguradoraListView.as_view(),
+        name="tomador-seguradora-list",
+    ),
+    path(
+        "<int:tomador_pk>/seguradoras/<int:seguradora_pk>/",
+        TomadorSeguradoraDetailView.as_view(),
+        name="tomador-seguradora-detail",
     ),
 ]

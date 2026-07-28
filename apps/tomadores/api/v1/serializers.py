@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from apps.tomadores.models import Tomador, ContatoAdicional, Socio, TomadorArquivo
+
+from apps.seguradoras.models import Seguradora
+from apps.tomadores.models import (
+    ContatoAdicional,
+    Socio,
+    Tomador,
+    TomadorArquivo,
+    TomadorSeguradora,
+)
 
 MAX_ARQUIVO_SIZE = 20 * 1024 * 1024  # 20MB
 
@@ -81,3 +89,51 @@ class TomadorSerializer(serializers.ModelSerializer):
     def validate_cnpj(self, value: str) -> str:
         # Normalise to digits-only for uniqueness check, but store formatted
         return value.strip()
+
+
+class TomadorSeguradoraSerializer(serializers.ModelSerializer):
+    seguradora = serializers.PrimaryKeyRelatedField(queryset=Seguradora.objects.all())
+
+    # Leitura: dados prontos para a tela de taxas do tomador.
+    seguradora_nome = serializers.CharField(source="seguradora.nome", read_only=True)
+    seguradora_ativo = serializers.BooleanField(source="seguradora.ativo", read_only=True)
+    apto = serializers.BooleanField(read_only=True)
+    premio_minimo_efetivo = serializers.DecimalField(
+        max_digits=14, decimal_places=2, read_only=True
+    )
+    dias_vencimento_efetivo = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = TomadorSeguradora
+        fields = [
+            "id",
+            "seguradora",
+            "seguradora_nome",
+            "seguradora_ativo",
+            "taxa",
+            "premio_minimo",
+            "premio_minimo_efetivo",
+            "dias_vencimento",
+            "dias_vencimento_efetivo",
+            "apto",
+            "criado_em",
+            "atualizado_em",
+        ]
+        read_only_fields = ["id", "criado_em", "atualizado_em"]
+
+
+class TomadorSeguradoraBulkSerializer(serializers.Serializer):
+    """Recebe a lista de condições enviada pela tela de taxas do tomador."""
+
+    itens = TomadorSeguradoraSerializer(many=True)
+
+    def validate_itens(self, value):
+        vistos = set()
+        for item in value:
+            seguradora = item["seguradora"]
+            if seguradora.pk in vistos:
+                raise serializers.ValidationError(
+                    f"Seguradora {seguradora.nome} repetida na lista."
+                )
+            vistos.add(seguradora.pk)
+        return value

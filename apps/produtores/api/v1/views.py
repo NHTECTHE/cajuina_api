@@ -1,11 +1,12 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.produtores import selectors, services
 from apps.produtores.models import Produtor
+
 from .serializers import ProdutorSerializer
 
 
@@ -39,7 +40,7 @@ class ProdutorDetailView(APIView):
             return selectors.produtor_get(pk=pk)
         except Produtor.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Produtor não encontrado.")
+            raise NotFound(detail="Produtor não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         produtor = self._get_object(pk)

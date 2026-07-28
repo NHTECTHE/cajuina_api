@@ -25,6 +25,7 @@ class ApoliceSerializer(serializers.ModelSerializer):
             "seguradora_nome",
             "numero_apolice",
             "valor_seguradora",
+            "vencimento_boleto",
             "arquivo_apolice",
             "arquivo_boleto",
             "emitido_por",

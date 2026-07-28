@@ -1,11 +1,12 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.corretores import selectors, services
 from apps.corretores.models import Corretor
+
 from .serializers import CorretorSerializer
 
 
@@ -39,7 +40,7 @@ class CorretorDetailView(APIView):
             return selectors.corretor_get(pk=pk)
         except Corretor.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Corretor não encontrado.")
+            raise NotFound(detail="Corretor não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         corretor = self._get_object(pk)

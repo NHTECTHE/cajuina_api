@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 
 from apps.modalidades.models import Modalidade
+from apps.seguradoras.models import Seguradora
 from apps.segurados.models import Segurado
 from apps.tomadores.models import Tomador
 
@@ -39,6 +40,14 @@ class Cotacao(models.Model):
         null=True,
         blank=True,
     )
+    seguradora = models.ForeignKey(
+        Seguradora,
+        on_delete=models.PROTECT,
+        related_name="cotacoes",
+        null=True,
+        blank=True,
+        help_text="Seguradora escolhida para esta cotação.",
+    )
 
     edital = models.CharField(max_length=255, blank=True, default="")
     data_inicio = models.DateField(null=True, blank=True)
@@ -49,6 +58,13 @@ class Cotacao(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+    )
+    premio = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Prêmio calculado a partir da taxa do tomador na seguradora escolhida.",
     )
     observacoes = models.TextField(blank=True, default="")
 

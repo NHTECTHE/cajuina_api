@@ -1,5 +1,6 @@
-from django.db.models.signals import pre_save, post_save, post_delete
+from django.db.models.signals import post_delete, post_save, pre_save
 from django.dispatch import receiver
+
 from apps.atividades.middleware import get_current_user
 from apps.atividades.services import atividade_create
 
@@ -18,9 +19,9 @@ def get_entity_name(model_name):
     return mapping.get(model_name, model_name)
 
 def get_item_description(instance):
-    if hasattr(instance, 'nome') and getattr(instance, 'nome'):
+    if hasattr(instance, 'nome') and instance.nome:
         return instance.nome
-    if hasattr(instance, 'first_name') and getattr(instance, 'first_name'):
+    if hasattr(instance, 'first_name') and instance.first_name:
         return instance.first_name
     return str(instance)
 

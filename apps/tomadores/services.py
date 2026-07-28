@@ -1,8 +1,10 @@
-from .models import Tomador, ContatoAdicional, Socio, TomadorArquivo
-
+from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from apps.notificacoes.models import Notificacao
-from django.contrib.auth import get_user_model
+
+from .models import ContatoAdicional, Socio, Tomador, TomadorArquivo, TomadorSeguradora
+
 
 def tomador_create(*, data: dict) -> Tomador:
     contatos = data.pop("contatos_adicionais", [])
@@ -76,3 +78,43 @@ def tomador_arquivo_create(*, tomador: Tomador, arquivo) -> TomadorArquivo:
 def tomador_arquivo_delete(*, arquivo: TomadorArquivo) -> None:
     arquivo.arquivo.delete(save=False)
     arquivo.delete()
+
+
+def tomador_seguradora_upsert(
+    *, tomador: Tomador, seguradora, data: dict
+) -> TomadorSeguradora:
+    """Cria ou atualiza as condições do par tomador/seguradora.
+
+    A UniqueConstraint do par permite um único update_or_create.
+    """
+    vinculo, _ = TomadorSeguradora.objects.update_or_create(
+        tomador=tomador,
+        seguradora=seguradora,
+        defaults=data,
+    )
+    return vinculo
+
+
+@transaction.atomic
+def tomador_seguradora_bulk_upsert(
+    *, tomador: Tomador, itens: list[dict]
+) -> list[TomadorSeguradora]:
+    """Salva as condições de várias seguradoras de uma vez.
+
+    Cada item precisa trazer `seguradora`; os demais campos são opcionais.
+    Seguradoras não enviadas ficam intactas.
+    """
+    resultado = []
+    for item in itens:
+        data = dict(item)
+        seguradora = data.pop("seguradora")
+        resultado.append(
+            tomador_seguradora_upsert(
+                tomador=tomador, seguradora=seguradora, data=data
+            )
+        )
+    return resultado
+
+
+def tomador_seguradora_delete(*, vinculo: TomadorSeguradora) -> None:
+    vinculo.delete()

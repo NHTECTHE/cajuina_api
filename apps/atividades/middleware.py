@@ -1,4 +1,5 @@
 import threading
+
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 _thread_locals = threading.local()
