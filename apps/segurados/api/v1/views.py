@@ -1,11 +1,12 @@
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.segurados import selectors, services
 from apps.segurados.models import Segurado
+
 from .serializers import SeguradoSerializer
 
 
@@ -38,7 +39,7 @@ class SeguradoDetailView(APIView):
             return selectors.segurado_get(pk=pk)
         except Segurado.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Segurado não encontrado.")
+            raise NotFound(detail="Segurado não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         segurado = self._get_object(pk)

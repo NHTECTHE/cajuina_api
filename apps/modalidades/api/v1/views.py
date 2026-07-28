@@ -1,14 +1,15 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
 from rest_framework.exceptions import NotFound, ValidationError
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.modalidades import selectors, services
 from apps.modalidades.models import Modalidade, ModalidadeSeguradora
 from apps.seguradoras.models import Seguradora
+
 from .serializers import (
     MatrizSerializer,
     ModalidadeSeguradoraBulkSerializer,
@@ -49,7 +50,7 @@ class ModalidadeDetailView(APIView):
         try:
             return selectors.modalidade_get(pk=pk)
         except Modalidade.DoesNotExist:
-            raise NotFound(detail="Modalidade não encontrada.")
+            raise NotFound(detail="Modalidade não encontrada.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         modalidade = self._get_object(pk)
@@ -69,7 +70,7 @@ class ModalidadeDetailView(APIView):
         try:
             services.modalidade_delete(modalidade=modalidade)
         except DjangoValidationError as exc:
-            raise ValidationError(detail=exc.messages)
+            raise ValidationError(detail=exc.messages) from None
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -86,7 +87,7 @@ class ModalidadeSeguradoraListView(APIView):
         try:
             return selectors.modalidade_get(pk=modalidade_pk)
         except Modalidade.DoesNotExist:
-            raise NotFound(detail="Modalidade não encontrada.")
+            raise NotFound(detail="Modalidade não encontrada.") from None
 
     def get(self, request: Request, modalidade_pk: int) -> Response:
         self._get_modalidade(modalidade_pk)
@@ -117,7 +118,7 @@ class ModalidadeSeguradoraDetailView(APIView):
                 modalidade_id=modalidade_pk, seguradora_id=seguradora_pk
             )
         except ModalidadeSeguradora.DoesNotExist:
-            raise NotFound(detail="Seguradora não mapeada nesta modalidade.")
+            raise NotFound(detail="Seguradora não mapeada nesta modalidade.") from None
 
     def get(self, request: Request, modalidade_pk: int, seguradora_pk: int) -> Response:
         vinculo = self._get_object(modalidade_pk, seguradora_pk)

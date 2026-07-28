@@ -1,12 +1,13 @@
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any, Dict, Optional
+from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from .models import Cotacao
 from apps.notificacoes.models import Notificacao
 from apps.tomadores.models import TomadorSeguradora
-from django.contrib.auth import get_user_model
+
+from .models import Cotacao
 
 DIAS_NO_ANO = Decimal("365")
 
@@ -15,7 +16,7 @@ def _quantizar(valor) -> Decimal:
     return Decimal(valor).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
-def cotacao_calcular_premio(*, cotacao: Cotacao) -> Optional[Decimal]:
+def cotacao_calcular_premio(*, cotacao: Cotacao) -> Decimal | None:
     """Prêmio pro rata temporis da cotação.
 
     (importancia_segurada / 365) * (taxa / 100) * prazo_dias, com piso no
@@ -50,7 +51,7 @@ def cotacao_calcular_premio(*, cotacao: Cotacao) -> Optional[Decimal]:
     return _quantizar(max(calculado, Decimal(premio_minimo)))
 
 
-def cotacao_create(*, data: Dict[str, Any], criado_por: Optional[object] = None) -> Cotacao:
+def cotacao_create(*, data: dict[str, Any], criado_por: object | None = None) -> Cotacao:
     cotacao = Cotacao(**data)
     if criado_por is not None and getattr(criado_por, "is_authenticated", False):
         cotacao.criado_por = criado_por
@@ -71,7 +72,7 @@ def cotacao_create(*, data: Dict[str, Any], criado_por: Optional[object] = None)
     return cotacao
 
 
-def cotacao_update(*, cotacao: Cotacao, data: Dict[str, Any]) -> Cotacao:
+def cotacao_update(*, cotacao: Cotacao, data: dict[str, Any]) -> Cotacao:
     for field, value in data.items():
         setattr(cotacao, field, value)
     # A seguradora, a IS e o prazo alimentam o prêmio: recalcula a cada alteração.

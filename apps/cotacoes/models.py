@@ -2,8 +2,8 @@ from django.conf import settings
 from django.db import models
 
 from apps.modalidades.models import Modalidade
-from apps.segurados.models import Segurado
 from apps.seguradoras.models import Seguradora
+from apps.segurados.models import Segurado
 from apps.tomadores.models import Tomador
 
 

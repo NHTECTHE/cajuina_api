@@ -27,7 +27,7 @@ class CotacaoEmitirView(APIView):
         try:
             cotacao = cotacoes_selectors.cotacao_get(pk=pk)
         except Cotacao.DoesNotExist:
-            raise NotFound(detail="Cotação não encontrada.")
+            raise NotFound(detail="Cotação não encontrada.") from None
 
         serializer = ApoliceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -65,6 +65,6 @@ class ApoliceDetailView(APIView):
         try:
             apolice = selectors.apolice_get(pk=pk)
         except Apolice.DoesNotExist:
-            raise NotFound(detail="Apólice não encontrada.")
+            raise NotFound(detail="Apólice não encontrada.") from None
         serializer = ApoliceSerializer(apolice)
         return Response(_envelope(serializer.data))

@@ -1,9 +1,10 @@
 from rest_framework import serializers
+
 from apps.seguradoras.models import Seguradora
 from apps.tomadores.models import (
-    Tomador,
     ContatoAdicional,
     Socio,
+    Tomador,
     TomadorArquivo,
     TomadorSeguradora,
 )

@@ -1,7 +1,9 @@
 from decimal import Decimal
+
 from rest_framework import serializers
-from apps.produtores.models import Produtor
+
 from apps.corretores.models import Corretor
+from apps.produtores.models import Produtor
 
 
 class ProdutorSerializer(serializers.ModelSerializer):

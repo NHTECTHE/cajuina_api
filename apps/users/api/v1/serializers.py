@@ -1,13 +1,13 @@
-from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from django.core.mail import BadHeaderError, send_mail
-from django.conf import settings
-from django.template.loader import render_to_string
 from django.template.exceptions import TemplateDoesNotExist
+from django.template.loader import render_to_string
+from django.utils.encoding import force_bytes, force_str
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -72,7 +72,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             user.delete()
             raise serializers.ValidationError(
                 "Não foi possível enviar o e-mail de ativação. Tente novamente mais tarde."
-            )
+            ) from None
 
         return user
 
@@ -183,7 +183,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
             uid = force_str(urlsafe_base64_decode(attrs['uidb64']))
             user = User.objects.get(pk=uid)
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-            raise serializers.ValidationError({"error": "Link inválido ou expirado."})
+            raise serializers.ValidationError({"error": "Link inválido ou expirado."}) from None
 
         if not default_token_generator.check_token(user, attrs['token']):
             raise serializers.ValidationError({"error": "Link inválido ou expirado."})

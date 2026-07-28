@@ -65,7 +65,7 @@ def codigo_para_seguradora(*, modalidade, seguradora) -> str:
             ativo=True,
         )
     except ModalidadeSeguradora.DoesNotExist:
-        raise ModalidadeNaoMapeada(modalidade, seguradora)
+        raise ModalidadeNaoMapeada(modalidade, seguradora) from None
     return vinculo.codigo_seguradora
 
 
@@ -82,5 +82,5 @@ def modalidade_por_codigo(*, seguradora, codigo: str) -> Modalidade:
             ativo=True,
         )
     except ModalidadeSeguradora.DoesNotExist:
-        raise ModalidadeNaoMapeada(f"código {codigo}", seguradora)
+        raise ModalidadeNaoMapeada(f"código {codigo}", seguradora) from None
     return vinculo.modalidade

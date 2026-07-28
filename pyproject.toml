@@ -17,8 +17,15 @@ dependencies = [
 dev-dependencies = [
     "pytest",
     "pytest-django",
-    "ruff",
+    # Pin de minor: o conjunto de regras default do ruff muda entre releases
+    # (0.16 ativou RUF012/FURB/DTZ e quebrou o CI sem mudanca de codigo).
+    "ruff>=0.16,<0.17",
 ]
+
+[tool.ruff.lint]
+# `select` explicito para o lint nao depender do default da versao instalada.
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+# E501 (comprimento de linha) fica fora: e formatacao, nao correcao.
 
 [tool.ruff.lint.per-file-ignores]
 # Settings do Django usam idiomas que o ruff sinaliza por padrão:

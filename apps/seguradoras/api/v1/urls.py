@@ -1,5 +1,6 @@
 from django.urls import path
-from .views import SeguradoraListCreateView, SeguradoraDetailView
+
+from .views import SeguradoraDetailView, SeguradoraListCreateView
 
 urlpatterns = [
     path("", SeguradoraListCreateView.as_view(), name="seguradora-list-create"),

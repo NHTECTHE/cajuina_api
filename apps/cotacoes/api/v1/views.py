@@ -42,7 +42,7 @@ class _CotacaoObjectMixin:
         try:
             return selectors.cotacao_get(pk=pk)
         except Cotacao.DoesNotExist:
-            raise NotFound(detail="Cotação não encontrada.")
+            raise NotFound(detail="Cotação não encontrada.") from None
 
 
 class CotacaoDetailView(_CotacaoObjectMixin, APIView):

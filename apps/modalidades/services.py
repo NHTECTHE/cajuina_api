@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from django.core.exceptions import ValidationError
 from django.db import transaction
@@ -6,13 +6,13 @@ from django.db import transaction
 from .models import Modalidade, ModalidadeSeguradora
 
 
-def modalidade_create(*, data: Dict[str, Any]) -> Modalidade:
+def modalidade_create(*, data: dict[str, Any]) -> Modalidade:
     modalidade = Modalidade(**data)
     modalidade.save()
     return modalidade
 
 
-def modalidade_update(*, modalidade: Modalidade, data: Dict[str, Any]) -> Modalidade:
+def modalidade_update(*, modalidade: Modalidade, data: dict[str, Any]) -> Modalidade:
     for field, value in data.items():
         setattr(modalidade, field, value)
     modalidade.save()

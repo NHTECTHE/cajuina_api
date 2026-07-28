@@ -1,8 +1,11 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
 from apps.notificacoes.models import Notificacao
+
 from .serializers import NotificacaoSerializer
+
 
 class NotificacaoListView(generics.ListAPIView):
     serializer_class = NotificacaoSerializer

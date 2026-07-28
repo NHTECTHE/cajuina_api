@@ -1,4 +1,5 @@
 from django.db.models import Q, QuerySet
+
 from .models import Tomador, TomadorArquivo, TomadorSeguradora
 
 

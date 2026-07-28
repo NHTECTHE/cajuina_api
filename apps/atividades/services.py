@@ -1,5 +1,6 @@
 from .models import Atividade
 
+
 def atividade_create(*, usuario=None, acao: str, entidade: str, item: str, detalhes: str = "") -> Atividade:
     nome = ""
     username = ""

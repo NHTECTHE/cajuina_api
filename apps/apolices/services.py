@@ -1,18 +1,18 @@
 from datetime import date, timedelta
-from typing import Any, Dict, Optional
+from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from apps.cotacoes.models import Cotacao
 from apps.notificacoes.models import Notificacao
 from apps.tomadores.models import TomadorSeguradora
-from django.contrib.auth import get_user_model
 
 from .models import Apolice
 
 
-def _vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> Optional[date]:
+def _vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> date | None:
     """Data sugerida do boleto: hoje + dias_vencimento_efetivo do par
     tomador x seguradora, com fallback para o vencimento da própria
     seguradora (embutido em dias_vencimento_efetivo)."""
@@ -31,7 +31,7 @@ def _vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> Optional[date
 
 @transaction.atomic
 def apolice_emitir(
-    *, cotacao: Cotacao, data: Dict[str, Any], emitido_por: Optional[object] = None
+    *, cotacao: Cotacao, data: dict[str, Any], emitido_por: object | None = None
 ) -> Apolice:
     if cotacao.status != Cotacao.STATUS_APROVADO:
         raise ValidationError("A cotação precisa estar aprovada para emitir a apólice.")

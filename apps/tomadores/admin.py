@@ -1,8 +1,9 @@
 from django.contrib import admin
+
 from .models import (
-    Tomador,
     ContatoAdicional,
     Socio,
+    Tomador,
     TomadorArquivo,
     TomadorSeguradora,
 )

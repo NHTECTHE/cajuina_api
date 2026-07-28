@@ -1,22 +1,22 @@
-from rest_framework import generics, status
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework_simplejwt.views import TokenObtainPairView
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
-from django.shortcuts import redirect
-from django.conf import settings
 from django.db.models import Q
+from django.shortcuts import redirect
+from django.utils.http import urlsafe_base64_decode
+from rest_framework import generics, status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import (
-    UserRegistrationSerializer,
     EmailOrUsernameTokenSerializer,
-    UserListSerializer,
-    UserAdminSerializer,
-    PasswordResetSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetSerializer,
+    UserAdminSerializer,
+    UserListSerializer,
+    UserRegistrationSerializer,
 )
 
 User = get_user_model()
@@ -138,7 +138,7 @@ class UserDetailView(APIView):
         try:
             return User.objects.get(pk=pk)
         except User.DoesNotExist:
-            raise NotFound(detail="Usuário não encontrado.")
+            raise NotFound(detail="Usuário não encontrado.") from None
 
     def get(self, request, pk):
         user = self._get_object(pk)

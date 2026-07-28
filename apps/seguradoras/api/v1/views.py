@@ -1,12 +1,13 @@
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.seguradoras import selectors, services
 from apps.seguradoras.models import Seguradora
+
 from .serializers import SeguradoraSerializer
 
 
@@ -42,7 +43,7 @@ class SeguradoraDetailView(APIView):
             return selectors.seguradora_get(pk=pk)
         except Seguradora.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Seguradora não encontrada.")
+            raise NotFound(detail="Seguradora não encontrada.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         seguradora = self._get_object(pk)

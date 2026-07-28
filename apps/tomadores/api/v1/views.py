@@ -1,17 +1,18 @@
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
 
 from apps.tomadores import selectors, services
 from apps.tomadores.models import Tomador, TomadorArquivo, TomadorSeguradora
+
 from .serializers import (
-    TomadorSerializer,
     TomadorArquivoSerializer,
-    TomadorSeguradoraSerializer,
     TomadorSeguradoraBulkSerializer,
+    TomadorSeguradoraSerializer,
+    TomadorSerializer,
 )
 
 
@@ -48,7 +49,7 @@ class TomadorDetailView(APIView):
             return selectors.tomador_get(pk=pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.")
+            raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
         tomador = self._get_object(pk)
@@ -79,7 +80,7 @@ class TomadorArquivoListCreateView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.")
+            raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
         self._get_tomador(tomador_pk)
@@ -107,7 +108,7 @@ class TomadorArquivoDetailView(APIView):
             return selectors.tomador_arquivo_get(tomador_id=tomador_pk, pk=pk)
         except TomadorArquivo.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Arquivo não encontrado.")
+            raise NotFound(detail="Arquivo não encontrado.") from None
 
     def delete(self, request: Request, tomador_pk: int, pk: int) -> Response:
         arquivo = self._get_object(tomador_pk, pk)
@@ -129,7 +130,7 @@ class TomadorSeguradoraListView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.")
+            raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
         self._get_tomador(tomador_pk)
@@ -163,7 +164,7 @@ class TomadorSeguradoraDetailView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.")
+            raise NotFound(detail="Tomador não encontrado.") from None
 
     def _get_object(self, tomador_pk: int, seguradora_pk: int) -> TomadorSeguradora:
         try:
@@ -172,7 +173,7 @@ class TomadorSeguradoraDetailView(APIView):
             )
         except TomadorSeguradora.DoesNotExist:
             from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Seguradora não vinculada a este tomador.")
+            raise NotFound(detail="Seguradora não vinculada a este tomador.") from None
 
     def get(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
         vinculo = self._get_object(tomador_pk, seguradora_pk)

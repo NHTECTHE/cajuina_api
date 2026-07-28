@@ -1,10 +1,10 @@
+from django.contrib.auth import get_user_model
 from django.db import transaction
 
-from .models import Tomador, ContatoAdicional, Socio, TomadorArquivo, TomadorSeguradora
-
-
 from apps.notificacoes.models import Notificacao
-from django.contrib.auth import get_user_model
+
+from .models import ContatoAdicional, Socio, Tomador, TomadorArquivo, TomadorSeguradora
+
 
 def tomador_create(*, data: dict) -> Tomador:
     contatos = data.pop("contatos_adicionais", [])
