@@ -167,7 +167,7 @@ class TomadorSeguradora(models.Model):
         """Vencimento a aplicar: o do par, ou o da seguradora quando não definido."""
         if self.dias_vencimento is not None:
             return self.dias_vencimento
-        return self.seguradora.dia_vencimento
+        return self.seguradora.vencimento_dias
 
 
 class Socio(models.Model):

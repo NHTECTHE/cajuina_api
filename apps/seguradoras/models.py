@@ -8,10 +8,10 @@ class Seguradora(models.Model):
     meta = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     premio_minimo = models.DecimalField(max_digits=14, decimal_places=2)
     taxa_comissao = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    dia_vencimento = models.PositiveSmallIntegerField(
+    vencimento_dias = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
-        validators=[MinValueValidator(1), MaxValueValidator(31)],
+        validators=[MinValueValidator(1), MaxValueValidator(30)],
     )
     ativo = models.BooleanField(default=True)
 

@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from typing import Any, Dict, Optional
 
 from django.core.exceptions import ValidationError
@@ -5,9 +6,27 @@ from django.db import transaction
 
 from apps.cotacoes.models import Cotacao
 from apps.notificacoes.models import Notificacao
+from apps.tomadores.models import TomadorSeguradora
 from django.contrib.auth import get_user_model
 
 from .models import Apolice
+
+
+def _vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> Optional[date]:
+    """Data sugerida do boleto: hoje + dias_vencimento_efetivo do par
+    tomador x seguradora, com fallback para o vencimento da própria
+    seguradora (embutido em dias_vencimento_efetivo)."""
+    try:
+        vinculo = TomadorSeguradora.objects.get(
+            tomador_id=cotacao.tomador_id, seguradora=seguradora
+        )
+        dias = vinculo.dias_vencimento_efetivo
+    except TomadorSeguradora.DoesNotExist:
+        dias = seguradora.vencimento_dias
+
+    if dias is None:
+        return None
+    return date.today() + timedelta(days=dias)
 
 
 @transaction.atomic
@@ -16,6 +35,14 @@ def apolice_emitir(
 ) -> Apolice:
     if cotacao.status != Cotacao.STATUS_APROVADO:
         raise ValidationError("A cotação precisa estar aprovada para emitir a apólice.")
+
+    if data.get("vencimento_boleto") is None:
+        data = {
+            **data,
+            "vencimento_boleto": _vencimento_boleto_default(
+                cotacao=cotacao, seguradora=data["seguradora"]
+            ),
+        }
 
     apolice = Apolice(cotacao=cotacao, **data)
     if emitido_por is not None and getattr(emitido_por, "is_authenticated", False):

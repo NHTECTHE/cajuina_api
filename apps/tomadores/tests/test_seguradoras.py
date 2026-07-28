@@ -41,14 +41,14 @@ def tomador(db):
 @pytest.fixture
 def porto(db):
     return Seguradora.objects.create(
-        nome="Porto Seguro", premio_minimo="150.00", dia_vencimento=30
+        nome="Porto Seguro", premio_minimo="150.00", vencimento_dias=30
     )
 
 
 @pytest.fixture
 def junto(db):
     return Seguradora.objects.create(
-        nome="Junto Seguros", premio_minimo="140.00", dia_vencimento=20
+        nome="Junto Seguros", premio_minimo="140.00", vencimento_dias=20
     )
 
 
@@ -108,7 +108,7 @@ class TestModel:
         vinculo = TomadorSeguradora.objects.create(
             tomador=tomador, seguradora=porto, taxa="1.50", dias_vencimento=None
         )
-        assert vinculo.dias_vencimento_efetivo == porto.dia_vencimento
+        assert vinculo.dias_vencimento_efetivo == porto.vencimento_dias
 
     def test_dias_vencimento_do_par_sobrepoe_o_da_seguradora(self, tomador, porto):
         vinculo = TomadorSeguradora.objects.create(

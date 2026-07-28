@@ -34,7 +34,7 @@ def seguradora(db):
         meta="1000000.00",
         premio_minimo="500000.00",
         taxa_comissao="5.00",
-        dia_vencimento=15,
+        vencimento_dias=15,
     )
 
 
@@ -100,18 +100,18 @@ class TestSeguradoraValidacoes:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_dia_vencimento_zero_retorna_400(self, auth_client, db):
+    def test_vencimento_dias_zero_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("seguradora-list-create"),
-            {"nome": "Seg X", "dia_vencimento": 0},
+            {"nome": "Seg X", "vencimento_dias": 0},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
-    def test_dia_vencimento_32_retorna_400(self, auth_client, db):
+    def test_vencimento_dias_31_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("seguradora-list-create"),
-            {"nome": "Seg X", "dia_vencimento": 32},
+            {"nome": "Seg X", "vencimento_dias": 31},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -142,7 +142,7 @@ class TestSeguradoraValidacoes:
         data = resp.data["data"]
         assert data["meta"] is None
         assert data["taxa_comissao"] is None
-        assert data["dia_vencimento"] is None
+        assert data["vencimento_dias"] is None
 
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
@@ -202,7 +202,7 @@ class TestSeguradoraCRUD:
                 "meta": "2000000.00",
                 "premio_minimo": "1500000.00",
                 "taxa_comissao": "3.50",
-                "dia_vencimento": 10,
+                "vencimento_dias": 10,
                 "ativo": True,
             },
             format="json",
@@ -211,4 +211,4 @@ class TestSeguradoraCRUD:
         data = resp.data["data"]
         assert data["nome"] == "Nova Seguradora"
         assert data["taxa_comissao"] == "3.50"
-        assert data["dia_vencimento"] == 10
+        assert data["vencimento_dias"] == 10

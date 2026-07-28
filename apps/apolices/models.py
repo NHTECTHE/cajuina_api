@@ -19,6 +19,7 @@ class Apolice(models.Model):
 
     numero_apolice = models.CharField(max_length=100)
     valor_seguradora = models.DecimalField(max_digits=14, decimal_places=2)
+    vencimento_boleto = models.DateField(null=True, blank=True)
 
     arquivo_apolice = models.FileField(
         upload_to="apolices/apolices/%Y/%m/", null=True, blank=True

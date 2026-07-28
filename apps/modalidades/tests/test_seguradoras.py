@@ -53,14 +53,14 @@ def licitacao(db):
 @pytest.fixture
 def porto(db):
     return Seguradora.objects.create(
-        nome="Porto Seguro", premio_minimo="150.00", dia_vencimento=30
+        nome="Porto Seguro", premio_minimo="150.00", vencimento_dias=30
     )
 
 
 @pytest.fixture
 def junto(db):
     return Seguradora.objects.create(
-        nome="Junto Seguros", premio_minimo="140.00", dia_vencimento=20
+        nome="Junto Seguros", premio_minimo="140.00", vencimento_dias=20
     )
 
 

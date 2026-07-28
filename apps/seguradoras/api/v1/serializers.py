@@ -9,9 +9,9 @@ class SeguradoraSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Taxa de comissão deve estar entre 0 e 100.")
         return value
 
-    def validate_dia_vencimento(self, value):
-        if value is not None and not (1 <= value <= 31):
-            raise serializers.ValidationError("Dia de vencimento deve estar entre 1 e 31.")
+    def validate_vencimento_dias(self, value):
+        if value is not None and not (1 <= value <= 30):
+            raise serializers.ValidationError("Vencimento deve estar entre 1 e 30 dias.")
         return value
 
     def validate_meta(self, value):
@@ -33,7 +33,7 @@ class SeguradoraSerializer(serializers.ModelSerializer):
             "meta",
             "premio_minimo",
             "taxa_comissao",
-            "dia_vencimento",
+            "vencimento_dias",
             "ativo",
             "api_usuario",
             "api_senha",
