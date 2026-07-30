@@ -40,6 +40,8 @@ urlpatterns = [
     path('api/v1/notificacoes/', include('apps.notificacoes.api.v1.urls')),
 ]
 
-# Servido pelo próprio Django em qualquer ambiente: o nginx da VPS faz proxy_pass
-# de tudo para o Django, então não há bloco `location /media/` dedicado no nginx.
+# ATENÇÃO: `static()` é no-op quando DEBUG=False (ver django/conf/urls/static.py),
+# então esta linha serve mídia APENAS em desenvolvimento. Em produção quem serve
+# /media/ é o nginx, via bloco `location /media/` apontando para o bind mount
+# ./media do docker-compose.prod.yml. Mexeu num, confira o outro.
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
