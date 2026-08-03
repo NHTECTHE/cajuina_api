@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
@@ -65,19 +64,3 @@ class CotacaoDetailView(_CotacaoObjectMixin, APIView):
         cotacao = self._get_object(pk)
         services.cotacao_delete(cotacao=cotacao)
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class CotacaoAprovarView(_CotacaoObjectMixin, APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, pk: int) -> Response:
-        cotacao = self._get_object(pk)
-        try:
-            cotacao = services.cotacao_aprovar(cotacao=cotacao)
-        except ValidationError as exc:
-            return Response(
-                {"detail": exc.messages[0]},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        serializer = CotacaoSerializer(cotacao)
-        return Response(_envelope(serializer.data))

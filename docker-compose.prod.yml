@@ -32,9 +32,10 @@ services:
     volumes:
       # Estáticos coletados (admin/DRF) expostos ao host para o nginx servir /static/.
       - ./staticfiles:/app/config/staticfiles
-      # Arquivos de mídia (uploads) persistidos entre redeploys; servidos pelo
-      # próprio Django via /media/ (ver config/urls.py).
-      - media_data:/app/config/media
+      # Uploads expostos ao host para o nginx servir /media/ (bloco `location
+      # /media/` no vhost). Bind mount em vez de volume nomeado justamente para
+      # que o nginx do host enxergue os arquivos; persiste entre redeploys.
+      - ./media:/app/config/media
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +44,6 @@ services:
 
 volumes:
   postgres_data:
-  media_data:
 
 networks:
   cajuina-net:

@@ -21,6 +21,29 @@ class Apolice(models.Model):
     valor_seguradora = models.DecimalField(max_digits=14, decimal_places=2)
     vencimento_boleto = models.DateField(null=True, blank=True)
 
+    observacoes = models.TextField(blank=True, default="")
+    arquivo_proposta = models.FileField(
+        upload_to="apolices/propostas/%Y/%m/", null=True, blank=True
+    )
+
+    STATUS_PREMIO_CHOICES = [
+        ("Pendente", "Pendente"),
+        ("Pago", "Pago"),
+        ("Atrasado", "Atrasado"),
+    ]
+    status_pagamento_premio = models.CharField(
+        max_length=20, choices=STATUS_PREMIO_CHOICES, default="Pendente"
+    )
+
+    STATUS_COMISSAO_CHOICES = [
+        ("A Receber", "A Receber"),
+        ("Recebido", "Recebido"),
+        ("Atrasado", "Atrasado"),
+    ]
+    status_pagamento_comissao = models.CharField(
+        max_length=20, choices=STATUS_COMISSAO_CHOICES, default="A Receber"
+    )
+
     arquivo_apolice = models.FileField(
         upload_to="apolices/apolices/%Y/%m/", null=True, blank=True
     )

@@ -2,7 +2,6 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 
 from apps.notificacoes.models import Notificacao
 from apps.tomadores.models import TomadorSeguradora
@@ -83,23 +82,3 @@ def cotacao_update(*, cotacao: Cotacao, data: dict[str, Any]) -> Cotacao:
 
 def cotacao_delete(*, cotacao: Cotacao) -> None:
     cotacao.delete()
-
-
-def cotacao_aprovar(*, cotacao: Cotacao) -> Cotacao:
-    if cotacao.status != Cotacao.STATUS_INICIADO:
-        raise ValidationError("Esta cotação já foi aprovada.")
-    cotacao.status = Cotacao.STATUS_APROVADO
-    cotacao.save(update_fields=["status", "atualizado_em"])
-
-    User = get_user_model()
-    users_to_notify = User.objects.all()
-    nome_exibicao = cotacao.tomador.nome_fantasia if cotacao.tomador.nome_fantasia else cotacao.tomador.nome
-    for user in users_to_notify:
-        Notificacao.objects.create(
-            usuario=user,
-            titulo="Nova proposta gerada",
-            status_badge="PROPOSTA",
-            mensagem=nome_exibicao
-        )
-
-    return cotacao

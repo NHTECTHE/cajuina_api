@@ -110,6 +110,7 @@ class TomadorSeguradoraSerializer(serializers.ModelSerializer):
             "seguradora",
             "seguradora_nome",
             "seguradora_ativo",
+            "status",
             "taxa",
             "premio_minimo",
             "premio_minimo_efetivo",
