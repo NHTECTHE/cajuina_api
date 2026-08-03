@@ -98,6 +98,12 @@ class TomadorSeguradora(models.Model):
     são política comercial dela, não avaliação de risco do tomador.
     """
 
+    class Status(models.TextChoices):
+        CADASTRO_OK = "cadastro_ok", "Cadastro OK"
+        SEM_CADASTRO = "sem_cadastro", "Sem cadastro"
+        OUTRO_CORRETOR = "outro_corretor", "Outro corretor"
+        SEM_ACEITACAO = "sem_aceitacao", "Sem aceitação"
+
     tomador = models.ForeignKey(
         Tomador,
         on_delete=models.CASCADE,
@@ -115,6 +121,11 @@ class TomadorSeguradora(models.Model):
         default=0,
         validators=[MinValueValidator(0)],
         help_text="Zero deixa a seguradora fora das cotações deste tomador.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.SEM_CADASTRO,
     )
     premio_minimo = models.DecimalField(
         max_digits=14,
@@ -153,7 +164,7 @@ class TomadorSeguradora(models.Model):
         """Se este par pode ser usado em cotações."""
         # Decimal() porque a instância pode carregar a taxa como str antes de
         # passar pelo banco (ex.: objects.create(taxa="1.50")).
-        return Decimal(self.taxa) > 0
+        return Decimal(self.taxa) > 0 and self.status == self.Status.CADASTRO_OK
 
     @property
     def premio_minimo_efetivo(self):
