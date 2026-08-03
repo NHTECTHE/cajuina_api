@@ -88,9 +88,19 @@ class TestModel:
 
     def test_taxa_positiva_habilita(self, tomador, porto):
         vinculo = TomadorSeguradora.objects.create(
-            tomador=tomador, seguradora=porto, taxa="1.50"
+            tomador=tomador,
+            seguradora=porto,
+            taxa="1.50",
+            status=TomadorSeguradora.Status.CADASTRO_OK,
         )
         assert vinculo.apto is True
+
+    def test_taxa_positiva_sem_cadastro_ok_deixa_inapto(self, tomador, porto):
+        vinculo = TomadorSeguradora.objects.create(
+            tomador=tomador, seguradora=porto, taxa="1.50"
+        )
+        assert vinculo.status == TomadorSeguradora.Status.SEM_CADASTRO
+        assert vinculo.apto is False
 
     def test_premio_minimo_nulo_herda_da_seguradora(self, tomador, porto):
         vinculo = TomadorSeguradora.objects.create(
@@ -288,9 +298,11 @@ class TestDetalhe:
 
     def test_preencher_taxa_reabilita(self, auth_client, tomador, porto):
         url = reverse("tomador-seguradora-detail", args=[tomador.pk, porto.pk])
-        auth_client.put(url, {"taxa": "0"}, format="json")
+        auth_client.put(url, {"taxa": "0", "status": "cadastro_ok"}, format="json")
 
-        resp = auth_client.put(url, {"taxa": "2.00"}, format="json")
+        resp = auth_client.put(
+            url, {"taxa": "2.00", "status": "cadastro_ok"}, format="json"
+        )
         assert resp.data["data"]["apto"] is True
 
     def test_get_de_vinculo_inexistente_retorna_404(self, auth_client, tomador, porto):
