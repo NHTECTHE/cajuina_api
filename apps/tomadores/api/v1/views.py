@@ -1,10 +1,18 @@
+from decimal import Decimal
+
+from django.db.models import Q, Sum
+from django.utils.timezone import localtime
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.apolices.models import Apolice
+from apps.atividades.models import Atividade
+from apps.seguradoras.models import Seguradora
 from apps.tomadores import selectors, services
 from apps.tomadores.models import Tomador, TomadorArquivo, TomadorSeguradora
 
@@ -15,9 +23,18 @@ from .serializers import (
     TomadorSerializer,
 )
 
+ZERO = Decimal("0.00")
+
 
 def _envelope(data) -> dict:
     return {"data": data}
+
+
+def _get_tomador_or_404(pk: int) -> Tomador:
+    try:
+        return selectors.tomador_get(pk=pk)
+    except Tomador.DoesNotExist:
+        raise NotFound(detail="Tomador não encontrado.") from None
 
 
 class TomadorListCreateView(APIView):
@@ -205,107 +222,119 @@ class TomadorSeguradoraDetailView(APIView):
 class TomadorPremioAcumuladoView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def _get_tomador(self, pk: int) -> Tomador:
-        try:
-            return selectors.tomador_get(pk=pk)
-        except Tomador.DoesNotExist:
-            from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.") from None
-
     def get(self, request: Request, tomador_pk: int) -> Response:
-        self._get_tomador(tomador_pk)
-        
-        from django.db.models import Sum
-        from apps.apolices.models import Apolice
-        from apps.seguradoras.models import Seguradora
+        _get_tomador_or_404(tomador_pk)
 
         apolices = Apolice.objects.filter(cotacao__tomador_id=tomador_pk)
-        premio_total = apolices.aggregate(total=Sum('valor_seguradora'))['total'] or 0
-        
-        seguradoras_qs = Seguradora.objects.filter(ativo=True).order_by('nome')
-        seguradoras_list = []
-        for seg in seguradoras_qs:
-            total_seg = apolices.filter(seguradora=seg).aggregate(total=Sum('valor_seguradora'))['total'] or 0
-            seguradoras_list.append({
-                "id": seg.id,
-                "nome": seg.nome,
-                "total": str(total_seg)
-            })
-            
-        return Response(_envelope({
-            "premio_total": str(premio_total),
-            "flex": "0.00",
-            "seguradoras": seguradoras_list
-        }))
+        premio_total = apolices.aggregate(total=Sum("valor_seguradora"))["total"] or ZERO
+
+        # Um único agregado por seguradora em vez de um `aggregate` por linha do
+        # loop — o custo deixa de crescer com a quantidade de seguradoras ativas.
+        totais = {
+            row["seguradora_id"]: row["total"]
+            for row in apolices.values("seguradora_id").annotate(
+                total=Sum("valor_seguradora")
+            )
+        }
+
+        seguradoras_list = [
+            {
+                "id": seguradora.id,
+                "nome": seguradora.nome,
+                "total": str(totais.get(seguradora.id) or ZERO),
+            }
+            for seguradora in Seguradora.objects.filter(ativo=True).order_by("nome")
+        ]
+
+        return Response(
+            _envelope(
+                {
+                    "premio_total": str(premio_total),
+                    # `flex` ainda não tem regra de cálculo definida; `null`
+                    # distingue "não calculado" de um zero legítimo.
+                    "flex": None,
+                    "seguradoras": seguradoras_list,
+                }
+            )
+        )
 
 
 class TomadorAtividadeListView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def _get_tomador(self, pk: int) -> Tomador:
-        try:
-            return selectors.tomador_get(pk=pk)
-        except Tomador.DoesNotExist:
-            from rest_framework.exceptions import NotFound
-            raise NotFound(detail="Tomador não encontrado.") from None
+    PAGE_SIZE = 10
+
+    SITUACAO_TOMADOR = {
+        "CRIAÇÃO": "Criação do Cadastro",
+        "ATUALIZAÇÃO": "Atualizar Dados",
+    }
 
     def get(self, request: Request, tomador_pk: int) -> Response:
-        tomador = self._get_tomador(tomador_pk)
+        _get_tomador_or_404(tomador_pk)
 
-        from apps.atividades.models import Atividade
-        from apps.tomadores.models import TomadorSeguradora
-        from apps.atividades.serializers import AtividadeSerializer
-        from django.db.models import Q
-        from django.utils.timezone import localtime
-        
-        # Get all TomadorSeguradora IDs for this tomador
-        ts_ids = TomadorSeguradora.objects.filter(tomador_id=tomador_pk).values_list('id', flat=True)
-        
-        # Query activities
+        ts_ids = TomadorSeguradora.objects.filter(
+            tomador_id=tomador_pk
+        ).values_list("id", flat=True)
+
         atividades = Atividade.objects.filter(
-            Q(entidade="Tomador", object_id=tomador_pk) |
-            Q(entidade="Tomador", item=tomador.nome) | # Fallback for old logs
-            Q(entidade="TomadorSeguradora", object_id__in=ts_ids) |
-            Q(entidade="TomadorSeguradora", item__startswith=f"{tomador.nome} —") # Fallback for old logs
-        ).order_by('-criado_em')
-        
-        # Format the response exactly like the mockup
-        # Example mockup: { data: "05/03/2026", hora: "10:06", situacao: "Alterar Taxas", usuario: "ytallo" }
-        formatted_list = []
-        for a in atividades:
-            situacao = a.acao
-            if a.entidade == "Tomador":
-                if a.acao == "CRIAÇÃO":
-                    situacao = "Criação do Cadastro"
-                elif a.acao == "ATUALIZAÇÃO":
-                    situacao = "Atualizar Dados"
-            elif a.entidade == "TomadorSeguradora":
-                if a.acao == "CRIAÇÃO" or a.acao == "ATUALIZAÇÃO":
-                    # Extrair o nome da seguradora do item. Ex: "Tomador — Seguradora: 5%"
-                    parts = a.item.split(" — ")
-                    seg_name = parts[1].split(":")[0] if len(parts) > 1 else ""
-                    situacao = f"Atualização de Taxas - {seg_name}" if seg_name else "Atualização de Taxas"
+            Q(entidade="Tomador", object_id=tomador_pk)
+            | Q(entidade="TomadorSeguradora", object_id__in=ts_ids)
+        ).order_by("-criado_em")
 
-            criado_em_local = localtime(a.criado_em)
-            formatted_list.append({
-                "id": a.id,
-                "data": criado_em_local.strftime("%d/%m/%Y"),
-                "hora": criado_em_local.strftime("%H:%M"),
-                "situacao": situacao,
-                "usuario": a.usuario_nome or "Sistema",
-                "detalhes": a.detalhes
-            })
-            
-        # Paginating the list for standard DRF/Next.js table compatibility
-        page = int(request.query_params.get("page", 1))
-        page_size = 10
-        start = (page - 1) * page_size
-        end = start + page_size
-        paginated_list = formatted_list[start:end]
+        page = self._get_page(request)
+        total = atividades.count()
+        start = (page - 1) * self.PAGE_SIZE
+        end = start + self.PAGE_SIZE
 
-        return Response({
-            "count": len(formatted_list),
-            "next": f"?page={page + 1}" if end < len(formatted_list) else None,
-            "previous": f"?page={page - 1}" if page > 1 else None,
-            "results": paginated_list
-        })
+        # O slice é aplicado ao queryset (vira LIMIT/OFFSET) antes da formatação,
+        # então só as linhas da página atual saem do banco.
+        results = [self._formatar(atividade) for atividade in atividades[start:end]]
+
+        return Response(
+            _envelope(
+                {
+                    "count": total,
+                    "next": f"?page={page + 1}" if end < total else None,
+                    "previous": f"?page={page - 1}" if page > 1 else None,
+                    "results": results,
+                }
+            )
+        )
+
+    def _get_page(self, request: Request) -> int:
+        """Página pedida, normalizada. Entrada inválida cai para 1 em vez de 500."""
+        try:
+            page = int(request.query_params.get("page", 1))
+        except (TypeError, ValueError):
+            return 1
+        return max(page, 1)
+
+    def _situacao(self, atividade: Atividade) -> str:
+        if atividade.entidade == "Tomador":
+            return self.SITUACAO_TOMADOR.get(atividade.acao, atividade.acao)
+
+        if atividade.entidade == "TomadorSeguradora" and atividade.acao in (
+            "CRIAÇÃO",
+            "ATUALIZAÇÃO",
+        ):
+            # `item` vem de TomadorSeguradora.__str__: "Tomador — Seguradora: 5.00%"
+            partes = atividade.item.split(" — ")
+            seguradora = partes[1].split(":")[0].strip() if len(partes) > 1 else ""
+            return (
+                f"Atualização de Taxas - {seguradora}"
+                if seguradora
+                else "Atualização de Taxas"
+            )
+
+        return atividade.acao
+
+    def _formatar(self, atividade: Atividade) -> dict:
+        criado_em = localtime(atividade.criado_em)
+        return {
+            "id": atividade.id,
+            "data": criado_em.strftime("%d/%m/%Y"),
+            "hora": criado_em.strftime("%H:%M"),
+            "situacao": self._situacao(atividade),
+            "usuario": atividade.usuario_nome or "Sistema",
+            "detalhes": atividade.detalhes,
+        }

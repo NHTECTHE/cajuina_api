@@ -6,5 +6,8 @@ class AtividadesConfig(AppConfig):
     name = 'apps.atividades'
 
     def ready(self):
-        import apps.atividades.signals
+        # Import com efeito colateral: registra os receivers de post_save/post_delete
+        # que alimentam o log de atividades. O `noqa` é necessário porque o import
+        # não tem uso léxico — removê-lo desliga o rastreamento inteiro.
+        import apps.atividades.signals  # noqa: F401
 
