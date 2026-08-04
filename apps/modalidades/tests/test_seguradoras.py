@@ -19,6 +19,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -71,6 +72,7 @@ def tomador(db):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestAutenticacao:
     def test_listar_sem_token_retorna_401(self, client, execucao):
@@ -87,6 +89,7 @@ class TestAutenticacao:
 
 
 # ─── Model ────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestModel:
@@ -111,15 +114,14 @@ class TestModel:
 
 # ─── Tradução: o fallback do legado não existe mais ───────────────────────────
 
+
 @pytest.mark.django_db
 class TestTraducao:
     def test_codigo_mapeado_e_retornado(self, execucao, junto):
         ModalidadeSeguradora.objects.create(
             modalidade=execucao, seguradora=junto, codigo_seguradora="3"
         )
-        codigo = selectors.codigo_para_seguradora(
-            modalidade=execucao, seguradora=junto
-        )
+        codigo = selectors.codigo_para_seguradora(modalidade=execucao, seguradora=junto)
         assert codigo == "3"
 
     def test_sem_mapeamento_levanta_erro(self, execucao, junto):
@@ -153,11 +155,18 @@ class TestTraducao:
         ModalidadeSeguradora.objects.create(
             modalidade=execucao, seguradora=junto, codigo_seguradora="3"
         )
-        assert selectors.codigo_para_seguradora(modalidade=execucao, seguradora=porto) == "17"
-        assert selectors.codigo_para_seguradora(modalidade=execucao, seguradora=junto) == "3"
+        assert (
+            selectors.codigo_para_seguradora(modalidade=execucao, seguradora=porto)
+            == "17"
+        )
+        assert (
+            selectors.codigo_para_seguradora(modalidade=execucao, seguradora=junto)
+            == "3"
+        )
 
 
 # ─── Upsert ───────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestUpsert:
@@ -168,9 +177,12 @@ class TestUpsert:
                 seguradora=porto,
                 data={"codigo_seguradora": "17"},
             )
-        assert ModalidadeSeguradora.objects.filter(
-            modalidade=execucao, seguradora=porto
-        ).count() == 1
+        assert (
+            ModalidadeSeguradora.objects.filter(
+                modalidade=execucao, seguradora=porto
+            ).count()
+            == 1
+        )
 
     def test_upsert_atualiza_codigo(self, execucao, porto):
         services.modalidade_seguradora_upsert(
@@ -179,7 +191,9 @@ class TestUpsert:
         services.modalidade_seguradora_upsert(
             modalidade=execucao, seguradora=porto, data={"codigo_seguradora": "21"}
         )
-        vinculo = ModalidadeSeguradora.objects.get(modalidade=execucao, seguradora=porto)
+        vinculo = ModalidadeSeguradora.objects.get(
+            modalidade=execucao, seguradora=porto
+        )
         assert vinculo.codigo_seguradora == "21"
 
     def test_codigo_em_branco_remove_mapeamento(self, execucao, porto):
@@ -202,12 +216,16 @@ class TestUpsert:
             modalidade=execucao,
             itens=[{"seguradora": porto, "codigo_seguradora": "17"}],
         )
-        assert ModalidadeSeguradora.objects.get(
-            modalidade=execucao, seguradora=junto
-        ).codigo_seguradora == "3"
+        assert (
+            ModalidadeSeguradora.objects.get(
+                modalidade=execucao, seguradora=junto
+            ).codigo_seguradora
+            == "3"
+        )
 
 
 # ─── Endpoints do mapeamento ──────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestEndpointsMapeamento:
@@ -215,7 +233,9 @@ class TestEndpointsMapeamento:
         ModalidadeSeguradora.objects.create(
             modalidade=execucao, seguradora=porto, codigo_seguradora="17"
         )
-        resp = auth_client.get(reverse("modalidade-seguradora-list", args=[execucao.pk]))
+        resp = auth_client.get(
+            reverse("modalidade-seguradora-list", args=[execucao.pk])
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.data["data"]) == 1
         assert resp.data["data"][0]["codigo_seguradora"] == "17"
@@ -239,7 +259,9 @@ class TestEndpointsMapeamento:
         assert resp.status_code == status.HTTP_200_OK
         assert execucao.seguradoras.count() == 2
 
-    def test_put_com_seguradora_repetida_retorna_400(self, auth_client, execucao, porto):
+    def test_put_com_seguradora_repetida_retorna_400(
+        self, auth_client, execucao, porto
+    ):
         resp = auth_client.put(
             reverse("modalidade-seguradora-list", args=[execucao.pk]),
             {
@@ -273,9 +295,12 @@ class TestEndpointsMapeamento:
 
 # ─── Matriz ───────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestMatriz:
-    def test_get_monta_grade_completa(self, auth_client, execucao, licitacao, porto, junto):
+    def test_get_monta_grade_completa(
+        self, auth_client, execucao, licitacao, porto, junto
+    ):
         ModalidadeSeguradora.objects.create(
             modalidade=execucao, seguradora=junto, codigo_seguradora="3"
         )
@@ -293,15 +318,15 @@ class TestMatriz:
 
     def test_get_ignora_inativos(self, auth_client, execucao, porto, db):
         Modalidade.objects.create(nome="Descontinuada", ativo=False)
-        Seguradora.objects.create(
-            nome="Inativa", premio_minimo="100.00", ativo=False
-        )
+        Seguradora.objects.create(nome="Inativa", premio_minimo="100.00", ativo=False)
         resp = auth_client.get(reverse("modalidade-matriz"))
         dados = resp.data["data"]
         assert [m["nome"] for m in dados["modalidades"]] == ["Execução de Contrato"]
         assert [s["nome"] for s in dados["seguradoras"]] == ["Porto Seguro"]
 
-    def test_put_salva_matriz_inteira(self, auth_client, execucao, licitacao, porto, junto):
+    def test_put_salva_matriz_inteira(
+        self, auth_client, execucao, licitacao, porto, junto
+    ):
         resp = auth_client.put(
             reverse("modalidade-matriz"),
             {
@@ -378,7 +403,9 @@ class TestMatriz:
             )
         assert ModalidadeSeguradora.objects.count() == 0
 
-    def test_put_com_modalidade_repetida_retorna_400(self, auth_client, execucao, porto):
+    def test_put_com_modalidade_repetida_retorna_400(
+        self, auth_client, execucao, porto
+    ):
         resp = auth_client.put(
             reverse("modalidade-matriz"),
             {
@@ -399,6 +426,7 @@ class TestMatriz:
 
 
 # ─── Ajustes no CRUD existente ────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestFiltroPorSeguradora:

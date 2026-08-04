@@ -49,6 +49,7 @@ class TomadorDetailView(APIView):
             return selectors.tomador_get(pk=pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
@@ -61,7 +62,9 @@ class TomadorDetailView(APIView):
         serializer = TomadorSerializer(tomador, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
 
-        tomador = services.tomador_update(tomador=tomador, data=serializer.validated_data)
+        tomador = services.tomador_update(
+            tomador=tomador, data=serializer.validated_data
+        )
         out = TomadorSerializer(tomador)
         return Response(_envelope(out.data))
 
@@ -80,17 +83,22 @@ class TomadorArquivoListCreateView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
         self._get_tomador(tomador_pk)
         arquivos = selectors.tomador_arquivo_list(tomador_id=tomador_pk)
-        serializer = TomadorArquivoSerializer(arquivos, many=True, context={"request": request})
+        serializer = TomadorArquivoSerializer(
+            arquivos, many=True, context={"request": request}
+        )
         return Response(_envelope(serializer.data))
 
     def post(self, request: Request, tomador_pk: int) -> Response:
         tomador = self._get_tomador(tomador_pk)
-        serializer = TomadorArquivoSerializer(data=request.data, context={"request": request})
+        serializer = TomadorArquivoSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         arquivo = services.tomador_arquivo_create(
             tomador=tomador,
@@ -108,6 +116,7 @@ class TomadorArquivoDetailView(APIView):
             return selectors.tomador_arquivo_get(tomador_id=tomador_pk, pk=pk)
         except TomadorArquivo.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Arquivo não encontrado.") from None
 
     def delete(self, request: Request, tomador_pk: int, pk: int) -> Response:
@@ -130,6 +139,7 @@ class TomadorSeguradoraListView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
@@ -164,6 +174,7 @@ class TomadorSeguradoraDetailView(APIView):
             return selectors.tomador_get(pk=tomador_pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def _get_object(self, tomador_pk: int, seguradora_pk: int) -> TomadorSeguradora:
@@ -173,6 +184,7 @@ class TomadorSeguradoraDetailView(APIView):
             )
         except TomadorSeguradora.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Seguradora não vinculada a este tomador.") from None
 
     def get(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
@@ -210,33 +222,42 @@ class TomadorPremioAcumuladoView(APIView):
             return selectors.tomador_get(pk=pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
         self._get_tomador(tomador_pk)
-        
+
         from django.db.models import Sum
+
         from apps.apolices.models import Apolice
         from apps.seguradoras.models import Seguradora
 
         apolices = Apolice.objects.filter(cotacao__tomador_id=tomador_pk)
-        premio_total = apolices.aggregate(total=Sum('valor_seguradora'))['total'] or 0
-        
-        seguradoras_qs = Seguradora.objects.filter(ativo=True).order_by('nome')
+        premio_total = apolices.aggregate(total=Sum("valor_seguradora"))["total"] or 0
+
+        seguradoras_qs = Seguradora.objects.filter(ativo=True).order_by("nome")
         seguradoras_list = []
         for seg in seguradoras_qs:
-            total_seg = apolices.filter(seguradora=seg).aggregate(total=Sum('valor_seguradora'))['total'] or 0
-            seguradoras_list.append({
-                "id": seg.id,
-                "nome": seg.nome,
-                "total": str(total_seg)
-            })
-            
-        return Response(_envelope({
-            "premio_total": str(premio_total),
-            "flex": "0.00",
-            "seguradoras": seguradoras_list
-        }))
+            total_seg = (
+                apolices.filter(seguradora=seg).aggregate(
+                    total=Sum("valor_seguradora")
+                )["total"]
+                or 0
+            )
+            seguradoras_list.append(
+                {"id": seg.id, "nome": seg.nome, "total": str(total_seg)}
+            )
+
+        return Response(
+            _envelope(
+                {
+                    "premio_total": str(premio_total),
+                    "flex": "0.00",
+                    "seguradoras": seguradoras_list,
+                }
+            )
+        )
 
 
 class TomadorAtividadeListView(APIView):
@@ -247,28 +268,33 @@ class TomadorAtividadeListView(APIView):
             return selectors.tomador_get(pk=pk)
         except Tomador.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Tomador não encontrado.") from None
 
     def get(self, request: Request, tomador_pk: int) -> Response:
         tomador = self._get_tomador(tomador_pk)
 
-        from apps.atividades.models import Atividade
-        from apps.tomadores.models import TomadorSeguradora
-        from apps.atividades.serializers import AtividadeSerializer
         from django.db.models import Q
         from django.utils.timezone import localtime
-        
+
+        from apps.atividades.models import Atividade
+        from apps.tomadores.models import TomadorSeguradora
+
         # Get all TomadorSeguradora IDs for this tomador
-        ts_ids = TomadorSeguradora.objects.filter(tomador_id=tomador_pk).values_list('id', flat=True)
-        
+        ts_ids = TomadorSeguradora.objects.filter(tomador_id=tomador_pk).values_list(
+            "id", flat=True
+        )
+
         # Query activities
         atividades = Atividade.objects.filter(
-            Q(entidade="Tomador", object_id=tomador_pk) |
-            Q(entidade="Tomador", item=tomador.nome) | # Fallback for old logs
-            Q(entidade="TomadorSeguradora", object_id__in=ts_ids) |
-            Q(entidade="TomadorSeguradora", item__startswith=f"{tomador.nome} —") # Fallback for old logs
-        ).order_by('-criado_em')
-        
+            Q(entidade="Tomador", object_id=tomador_pk)
+            | Q(entidade="Tomador", item=tomador.nome)  # Fallback for old logs
+            | Q(entidade="TomadorSeguradora", object_id__in=ts_ids)
+            | Q(
+                entidade="TomadorSeguradora", item__startswith=f"{tomador.nome} —"
+            )  # Fallback for old logs
+        ).order_by("-criado_em")
+
         # Format the response exactly like the mockup
         # Example mockup: { data: "05/03/2026", hora: "10:06", situacao: "Alterar Taxas", usuario: "ytallo" }
         formatted_list = []
@@ -284,18 +310,24 @@ class TomadorAtividadeListView(APIView):
                     # Extrair o nome da seguradora do item. Ex: "Tomador — Seguradora: 5%"
                     parts = a.item.split(" — ")
                     seg_name = parts[1].split(":")[0] if len(parts) > 1 else ""
-                    situacao = f"Atualização de Taxas - {seg_name}" if seg_name else "Atualização de Taxas"
+                    situacao = (
+                        f"Atualização de Taxas - {seg_name}"
+                        if seg_name
+                        else "Atualização de Taxas"
+                    )
 
             criado_em_local = localtime(a.criado_em)
-            formatted_list.append({
-                "id": a.id,
-                "data": criado_em_local.strftime("%d/%m/%Y"),
-                "hora": criado_em_local.strftime("%H:%M"),
-                "situacao": situacao,
-                "usuario": a.usuario_nome or "Sistema",
-                "detalhes": a.detalhes
-            })
-            
+            formatted_list.append(
+                {
+                    "id": a.id,
+                    "data": criado_em_local.strftime("%d/%m/%Y"),
+                    "hora": criado_em_local.strftime("%H:%M"),
+                    "situacao": situacao,
+                    "usuario": a.usuario_nome or "Sistema",
+                    "detalhes": a.detalhes,
+                }
+            )
+
         # Paginating the list for standard DRF/Next.js table compatibility
         page = int(request.query_params.get("page", 1))
         page_size = 10
@@ -303,9 +335,11 @@ class TomadorAtividadeListView(APIView):
         end = start + page_size
         paginated_list = formatted_list[start:end]
 
-        return Response({
-            "count": len(formatted_list),
-            "next": f"?page={page + 1}" if end < len(formatted_list) else None,
-            "previous": f"?page={page - 1}" if page > 1 else None,
-            "results": paginated_list
-        })
+        return Response(
+            {
+                "count": len(formatted_list),
+                "next": f"?page={page + 1}" if end < len(formatted_list) else None,
+                "previous": f"?page={page - 1}" if page > 1 else None,
+                "results": paginated_list,
+            }
+        )

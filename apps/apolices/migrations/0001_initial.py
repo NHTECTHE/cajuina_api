@@ -6,35 +6,78 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
-        ('seguradoras', '0004_seguradora_api_ou_name_seguradora_api_senha_and_more'),
-        ('cotacoes', '0003_alter_cotacao_status'),
+        ("seguradoras", "0004_seguradora_api_ou_name_seguradora_api_senha_and_more"),
+        ("cotacoes", "0003_alter_cotacao_status"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Apolice',
+            name="Apolice",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('numero_apolice', models.CharField(max_length=100)),
-                ('valor_seguradora', models.DecimalField(decimal_places=2, max_digits=14)),
-                ('arquivo_apolice', models.FileField(blank=True, null=True, upload_to='apolices/apolices/%Y/%m/')),
-                ('arquivo_boleto', models.FileField(blank=True, null=True, upload_to='apolices/boletos/%Y/%m/')),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('atualizado_em', models.DateTimeField(auto_now=True)),
-                ('cotacao', models.OneToOneField(on_delete=django.db.models.deletion.PROTECT, related_name='apolice', to='cotacoes.cotacao')),
-                ('emitido_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='apolices', to=settings.AUTH_USER_MODEL)),
-                ('seguradora', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='apolices', to='seguradoras.seguradora')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("numero_apolice", models.CharField(max_length=100)),
+                (
+                    "valor_seguradora",
+                    models.DecimalField(decimal_places=2, max_digits=14),
+                ),
+                (
+                    "arquivo_apolice",
+                    models.FileField(
+                        blank=True, null=True, upload_to="apolices/apolices/%Y/%m/"
+                    ),
+                ),
+                (
+                    "arquivo_boleto",
+                    models.FileField(
+                        blank=True, null=True, upload_to="apolices/boletos/%Y/%m/"
+                    ),
+                ),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
+                (
+                    "cotacao",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="apolice",
+                        to="cotacoes.cotacao",
+                    ),
+                ),
+                (
+                    "emitido_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="apolices",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "seguradora",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="apolices",
+                        to="seguradoras.seguradora",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Apólice',
-                'verbose_name_plural': 'Apólices',
-                'db_table': 'apolices',
-                'ordering': ['-id'],
+                "verbose_name": "Apólice",
+                "verbose_name_plural": "Apólices",
+                "db_table": "apolices",
+                "ordering": ["-id"],
             },
         ),
     ]

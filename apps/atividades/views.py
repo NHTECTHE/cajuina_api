@@ -10,6 +10,6 @@ class AtividadeListView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        atividades = Atividade.objects.all().order_by('-criado_em')
+        atividades = Atividade.objects.all().order_by("-criado_em")
         serializer = AtividadeSerializer(atividades, many=True)
         return Response({"data": serializer.data})

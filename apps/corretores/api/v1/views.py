@@ -40,6 +40,7 @@ class CorretorDetailView(APIView):
             return selectors.corretor_get(pk=pk)
         except Corretor.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Corretor não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
@@ -51,7 +52,9 @@ class CorretorDetailView(APIView):
         corretor = self._get_object(pk)
         serializer = CorretorSerializer(corretor, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        corretor = services.corretor_update(corretor=corretor, data=serializer.validated_data)
+        corretor = services.corretor_update(
+            corretor=corretor, data=serializer.validated_data
+        )
         out = CorretorSerializer(corretor)
         return Response(_envelope(out.data))
 

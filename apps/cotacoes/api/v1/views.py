@@ -56,7 +56,9 @@ class CotacaoDetailView(_CotacaoObjectMixin, APIView):
         cotacao = self._get_object(pk)
         serializer = CotacaoSerializer(cotacao, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        cotacao = services.cotacao_update(cotacao=cotacao, data=serializer.validated_data)
+        cotacao = services.cotacao_update(
+            cotacao=cotacao, data=serializer.validated_data
+        )
         out = CotacaoSerializer(cotacao)
         return Response(_envelope(out.data))
 

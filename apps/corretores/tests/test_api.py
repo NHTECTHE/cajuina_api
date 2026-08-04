@@ -10,6 +10,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -22,7 +23,11 @@ def user(db):
 
 @pytest.fixture
 def auth_client(client, user):
-    resp = client.post(reverse("token_obtain_pair"), {"username": "tester", "password": "senha123"}, format="json")
+    resp = client.post(
+        reverse("token_obtain_pair"),
+        {"username": "tester", "password": "senha123"},
+        format="json",
+    )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
@@ -45,6 +50,7 @@ def corretor(db):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestCorretorAutenticacao:
     """Endpoints sem token devem retornar 401 — nunca expor dados."""
@@ -54,7 +60,11 @@ class TestCorretorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_criar_sem_token_retorna_401(self, client):
-        resp = client.post(reverse("corretor-list-create"), {"cpf_cnpj": "000", "nome": "X"}, format="json")
+        resp = client.post(
+            reverse("corretor-list-create"),
+            {"cpf_cnpj": "000", "nome": "X"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_detalhe_sem_token_retorna_401(self, client, corretor):
@@ -62,7 +72,11 @@ class TestCorretorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_editar_sem_token_retorna_401(self, client, corretor):
-        resp = client.patch(reverse("corretor-detail", args=[corretor.pk]), {"nome": "Hacker"}, format="json")
+        resp = client.patch(
+            reverse("corretor-detail", args=[corretor.pk]),
+            {"nome": "Hacker"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_excluir_sem_token_retorna_401(self, client, corretor):
@@ -71,6 +85,7 @@ class TestCorretorAutenticacao:
 
 
 # ─── Unicidade de CPF/CNPJ ────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorUnicidade:
@@ -93,7 +108,9 @@ class TestCorretorUnicidade:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_atualizar_cpf_cnpj_para_existente_retorna_400(self, auth_client, corretor, db):
+    def test_atualizar_cpf_cnpj_para_existente_retorna_400(
+        self, auth_client, corretor, db
+    ):
         outro = Corretor.objects.create(cpf_cnpj="00.000.000/0001-00", nome="Outro")
         resp = auth_client.patch(
             reverse("corretor-detail", args=[outro.pk]),
@@ -104,6 +121,7 @@ class TestCorretorUnicidade:
 
 
 # ─── Campos obrigatórios ──────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorCamposObrigatorios:
@@ -128,6 +146,7 @@ class TestCorretorCamposObrigatorios:
 
 # ─── Integridade dos dados financeiros ───────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestCorretorPercentual:
     """Percentual fora de 0–100 corromperia cálculos de comissão."""
@@ -135,7 +154,11 @@ class TestCorretorPercentual:
     def test_percentual_acima_de_100_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("corretor-list-create"),
-            {"cpf_cnpj": "22.222.222/0001-22", "nome": "Corretor X", "percentual": "150.00"},
+            {
+                "cpf_cnpj": "22.222.222/0001-22",
+                "nome": "Corretor X",
+                "percentual": "150.00",
+            },
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -143,7 +166,11 @@ class TestCorretorPercentual:
     def test_percentual_negativo_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("corretor-list-create"),
-            {"cpf_cnpj": "33.333.333/0001-33", "nome": "Corretor Y", "percentual": "-1.00"},
+            {
+                "cpf_cnpj": "33.333.333/0001-33",
+                "nome": "Corretor Y",
+                "percentual": "-1.00",
+            },
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -151,7 +178,11 @@ class TestCorretorPercentual:
     def test_percentual_nulo_e_aceito(self, auth_client, db):
         resp = auth_client.post(
             reverse("corretor-list-create"),
-            {"cpf_cnpj": "44.444.444/0001-44", "nome": "Corretor Z", "percentual": None},
+            {
+                "cpf_cnpj": "44.444.444/0001-44",
+                "nome": "Corretor Z",
+                "percentual": None,
+            },
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
@@ -160,13 +191,18 @@ class TestCorretorPercentual:
     def test_percentual_zero_e_aceito(self, auth_client, db):
         resp = auth_client.post(
             reverse("corretor-list-create"),
-            {"cpf_cnpj": "55.555.555/0001-55", "nome": "Corretor W", "percentual": "0.00"},
+            {
+                "cpf_cnpj": "55.555.555/0001-55",
+                "nome": "Corretor W",
+                "percentual": "0.00",
+            },
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorCRUD:
@@ -178,8 +214,12 @@ class TestCorretorCRUD:
         assert len(resp.data["data"]) == 1
 
     def test_busca_por_nome(self, auth_client, corretor, db):
-        Corretor.objects.create(cpf_cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente")
-        resp = auth_client.get(reverse("corretor-list-create"), {"search": "Corretor Teste"})
+        Corretor.objects.create(
+            cpf_cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente"
+        )
+        resp = auth_client.get(
+            reverse("corretor-list-create"), {"search": "Corretor Teste"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert all("Corretor Teste" in c["nome"] for c in resp.data["data"])
 

@@ -21,9 +21,11 @@ from .serializers import (
 
 User = get_user_model()
 
+
 class UserRegistrationView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [AllowAny]
+
 
 class UserActivationView(APIView):
     permission_classes = [AllowAny]
@@ -35,7 +37,7 @@ class UserActivationView(APIView):
         except (TypeError, ValueError, OverflowError, User.DoesNotExist):
             user = None
 
-        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:3000")
 
         if user is not None and default_token_generator.check_token(user, token):
             user.is_active = True
@@ -44,6 +46,7 @@ class UserActivationView(APIView):
         else:
             return redirect(f"{frontend_url}/?activation=error")
 
+
 class PasswordResetView(APIView):
     permission_classes = [AllowAny]
 
@@ -51,7 +54,13 @@ class PasswordResetView(APIView):
         serializer = PasswordResetSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"message": "Se o e-mail estiver cadastrado, você receberá um link de recuperação."}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "message": "Se o e-mail estiver cadastrado, você receberá um link de recuperação."
+            },
+            status=status.HTTP_200_OK,
+        )
+
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
@@ -60,21 +69,26 @@ class PasswordResetConfirmView(APIView):
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response({"message": "Senha atualizada com sucesso."}, status=status.HTTP_200_OK)
+        return Response(
+            {"message": "Senha atualizada com sucesso."}, status=status.HTTP_200_OK
+        )
+
 
 class UserMeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
-        return Response({
-            "id": user.id,
-            "first_name": user.first_name,
-            "email": user.email,
-            "cnpj": user.cnpj,
-            "telefone": user.telefone,
-            "is_superuser": user.is_superuser,
-        })
+        return Response(
+            {
+                "id": user.id,
+                "first_name": user.first_name,
+                "email": user.email,
+                "cnpj": user.cnpj,
+                "telefone": user.telefone,
+                "is_superuser": user.is_superuser,
+            }
+        )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -92,12 +106,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     user_obj = User.objects.filter(username=username).first()
                 if user_obj:
                     from apps.atividades.services import atividade_create
+
                     atividade_create(
                         usuario=user_obj,
                         acao="LOGIN",
                         entidade="Autenticacao",
                         item=f"{user_obj.first_name if user_obj.first_name else user_obj.username}",
-                        detalhes="Status: sucesso | Origem: web | HTTP: 200"
+                        detalhes="Status: sucesso | Origem: web | HTTP: 200",
                     )
             except Exception as e:
                 print(f"Error logging login: {e}")
@@ -107,6 +122,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 def _envelope(data):
     return {"data": data}
 
+
 class UserListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -115,9 +131,9 @@ class UserListCreateView(APIView):
         qs = User.objects.all().order_by("first_name")
         if search:
             qs = qs.filter(
-                Q(first_name__icontains=search) |
-                Q(email__icontains=search) |
-                Q(username__icontains=search)
+                Q(first_name__icontains=search)
+                | Q(email__icontains=search)
+                | Q(username__icontains=search)
             )
         serializer = UserListSerializer(qs, many=True)
         return Response(_envelope(serializer.data))
@@ -135,6 +151,7 @@ class UserDetailView(APIView):
 
     def _get_object(self, pk):
         from rest_framework.exceptions import NotFound
+
         try:
             return User.objects.get(pk=pk)
         except User.DoesNotExist:

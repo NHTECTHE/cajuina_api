@@ -25,7 +25,7 @@ def tomador_create(*, data: dict) -> Tomador:
             usuario=user,
             titulo="Novo tomador cadastrado",
             status_badge="NOVO",
-            mensagem=nome_exibicao
+            mensagem=nome_exibicao,
         )
 
     return tomador
@@ -55,15 +55,13 @@ def tomador_delete(*, tomador: Tomador) -> None:
 
 
 def _sync_contatos(tomador: Tomador, contatos: list[dict]) -> None:
-    ContatoAdicional.objects.bulk_create([
-        ContatoAdicional(tomador=tomador, **c) for c in contatos
-    ])
+    ContatoAdicional.objects.bulk_create(
+        [ContatoAdicional(tomador=tomador, **c) for c in contatos]
+    )
 
 
 def _sync_socios(tomador: Tomador, socios: list[dict]) -> None:
-    Socio.objects.bulk_create([
-        Socio(tomador=tomador, **s) for s in socios
-    ])
+    Socio.objects.bulk_create([Socio(tomador=tomador, **s) for s in socios])
 
 
 def tomador_arquivo_create(*, tomador: Tomador, arquivo) -> TomadorArquivo:
@@ -109,9 +107,7 @@ def tomador_seguradora_bulk_upsert(
         data = dict(item)
         seguradora = data.pop("seguradora")
         resultado.append(
-            tomador_seguradora_upsert(
-                tomador=tomador, seguradora=seguradora, data=data
-            )
+            tomador_seguradora_upsert(tomador=tomador, seguradora=seguradora, data=data)
         )
     return resultado
 

@@ -10,6 +10,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -22,7 +23,11 @@ def user(db):
 
 @pytest.fixture
 def auth_client(client, user):
-    resp = client.post(reverse("token_obtain_pair"), {"username": "tester", "password": "senha123"}, format="json")
+    resp = client.post(
+        reverse("token_obtain_pair"),
+        {"username": "tester", "password": "senha123"},
+        format="json",
+    )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
@@ -40,6 +45,7 @@ def seguradora(db):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoraAutenticacao:
     """Endpoints sem token devem retornar 401."""
@@ -49,7 +55,9 @@ class TestSeguradoraAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_criar_sem_token_retorna_401(self, client):
-        resp = client.post(reverse("seguradora-list-create"), {"nome": "X"}, format="json")
+        resp = client.post(
+            reverse("seguradora-list-create"), {"nome": "X"}, format="json"
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_detalhe_sem_token_retorna_401(self, client, seguradora):
@@ -57,7 +65,11 @@ class TestSeguradoraAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_editar_sem_token_retorna_401(self, client, seguradora):
-        resp = client.patch(reverse("seguradora-detail", args=[seguradora.pk]), {"nome": "X"}, format="json")
+        resp = client.patch(
+            reverse("seguradora-detail", args=[seguradora.pk]),
+            {"nome": "X"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_excluir_sem_token_retorna_401(self, client, seguradora):
@@ -67,18 +79,26 @@ class TestSeguradoraAutenticacao:
 
 # ─── Campos obrigatórios ──────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoraCamposObrigatorios:
     def test_criar_sem_nome_retorna_400(self, auth_client, db):
-        resp = auth_client.post(reverse("seguradora-list-create"), {"premio_minimo": "100.00"}, format="json")
+        resp = auth_client.post(
+            reverse("seguradora-list-create"),
+            {"premio_minimo": "100.00"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_criar_sem_premio_minimo_retorna_400(self, auth_client, db):
-        resp = auth_client.post(reverse("seguradora-list-create"), {"nome": "Seg X"}, format="json")
+        resp = auth_client.post(
+            reverse("seguradora-list-create"), {"nome": "Seg X"}, format="json"
+        )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
 # ─── Validações financeiras ───────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestSeguradoraValidacoes:
@@ -147,6 +167,7 @@ class TestSeguradoraValidacoes:
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoraCRUD:
     """Fluxo principal da tela de seguradoras."""
@@ -157,8 +178,12 @@ class TestSeguradoraCRUD:
         assert len(resp.data["data"]) == 1
 
     def test_busca_por_nome(self, auth_client, seguradora, db):
-        Seguradora.objects.create(nome="Outra Totalmente Diferente", premio_minimo="100.00")
-        resp = auth_client.get(reverse("seguradora-list-create"), {"search": "Seguradora Teste"})
+        Seguradora.objects.create(
+            nome="Outra Totalmente Diferente", premio_minimo="100.00"
+        )
+        resp = auth_client.get(
+            reverse("seguradora-list-create"), {"search": "Seguradora Teste"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert all("Seguradora Teste" in s["nome"] for s in resp.data["data"])
 

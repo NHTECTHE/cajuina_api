@@ -12,6 +12,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -54,6 +55,7 @@ def junto(db):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestAutenticacao:
     def test_listar_sem_token_retorna_401(self, client, tomador):
@@ -70,6 +72,7 @@ class TestAutenticacao:
 
 
 # ─── Model ────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestModel:
@@ -129,6 +132,7 @@ class TestModel:
 
 # ─── Listagem ─────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestListagem:
     def test_lista_vazia_quando_sem_vinculos(self, auth_client, tomador):
@@ -183,6 +187,7 @@ class TestListagem:
 
 
 # ─── Gravação em lote ─────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestBulkUpsert:
@@ -275,6 +280,7 @@ class TestBulkUpsert:
 
 
 # ─── Item individual ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestDetalhe:

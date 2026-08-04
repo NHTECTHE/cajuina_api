@@ -10,6 +10,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -22,7 +23,11 @@ def user(db):
 
 @pytest.fixture
 def auth_client(client, user):
-    resp = client.post(reverse("token_obtain_pair"), {"username": "tester", "password": "senha123"}, format="json")
+    resp = client.post(
+        reverse("token_obtain_pair"),
+        {"username": "tester", "password": "senha123"},
+        format="json",
+    )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
@@ -40,6 +45,7 @@ def segurado(db):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoAutenticacao:
     """Endpoints sem token devem retornar 401 — nunca expor dados."""
@@ -49,7 +55,9 @@ class TestSeguradoAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_criar_sem_token_retorna_401(self, client):
-        resp = client.post(reverse("segurado-list-create"), {"cnpj": "000", "nome": "X"}, format="json")
+        resp = client.post(
+            reverse("segurado-list-create"), {"cnpj": "000", "nome": "X"}, format="json"
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_detalhe_sem_token_retorna_401(self, client, segurado):
@@ -57,7 +65,11 @@ class TestSeguradoAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_editar_sem_token_retorna_401(self, client, segurado):
-        resp = client.patch(reverse("segurado-detail", args=[segurado.pk]), {"nome": "Hacker"}, format="json")
+        resp = client.patch(
+            reverse("segurado-detail", args=[segurado.pk]),
+            {"nome": "Hacker"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_excluir_sem_token_retorna_401(self, client, segurado):
@@ -66,6 +78,7 @@ class TestSeguradoAutenticacao:
 
 
 # ─── Unicidade de CNPJ ────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestSeguradoCnpjUnico:
@@ -100,6 +113,7 @@ class TestSeguradoCnpjUnico:
 
 # ─── Campos obrigatórios ──────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoCamposObrigatorios:
     """Campos críticos ausentes devem ser rejeitados na entrada."""
@@ -123,6 +137,7 @@ class TestSeguradoCamposObrigatorios:
 
 # ─── Observações ──────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoObservacoes:
     """Observações com mais de 500 caracteres devem ser rejeitadas."""
@@ -130,7 +145,11 @@ class TestSeguradoObservacoes:
     def test_observacoes_acima_de_500_retorna_400(self, auth_client, db):
         resp = auth_client.post(
             reverse("segurado-list-create"),
-            {"cnpj": "22.222.222/0001-22", "nome": "Segurado X", "observacoes": "x" * 501},
+            {
+                "cnpj": "22.222.222/0001-22",
+                "nome": "Segurado X",
+                "observacoes": "x" * 501,
+            },
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -146,6 +165,7 @@ class TestSeguradoObservacoes:
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestSeguradoCRUD:
     """Fluxo principal — se quebrar, a tela inteira para de funcionar."""
@@ -156,8 +176,12 @@ class TestSeguradoCRUD:
         assert len(resp.data["data"]) == 1
 
     def test_busca_por_nome(self, auth_client, segurado, db):
-        Segurado.objects.create(cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente")
-        resp = auth_client.get(reverse("segurado-list-create"), {"search": "Segurado Teste"})
+        Segurado.objects.create(
+            cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente"
+        )
+        resp = auth_client.get(
+            reverse("segurado-list-create"), {"search": "Segurado Teste"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert all("Segurado Teste" in s["nome"] for s in resp.data["data"])
 

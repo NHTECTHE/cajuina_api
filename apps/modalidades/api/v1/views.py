@@ -61,7 +61,9 @@ class ModalidadeDetailView(APIView):
         modalidade = self._get_object(pk)
         serializer = ModalidadeSerializer(modalidade, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        modalidade = services.modalidade_update(modalidade=modalidade, data=serializer.validated_data)
+        modalidade = services.modalidade_update(
+            modalidade=modalidade, data=serializer.validated_data
+        )
         out = ModalidadeSerializer(modalidade)
         return Response(_envelope(out.data))
 
@@ -112,7 +114,9 @@ class ModalidadeSeguradoraListView(APIView):
 class ModalidadeSeguradoraDetailView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def _get_object(self, modalidade_pk: int, seguradora_pk: int) -> ModalidadeSeguradora:
+    def _get_object(
+        self, modalidade_pk: int, seguradora_pk: int
+    ) -> ModalidadeSeguradora:
         try:
             return selectors.modalidade_seguradora_get(
                 modalidade_id=modalidade_pk, seguradora_id=seguradora_pk
@@ -125,7 +129,9 @@ class ModalidadeSeguradoraDetailView(APIView):
         serializer = ModalidadeSeguradoraSerializer(vinculo)
         return Response(_envelope(serializer.data))
 
-    def delete(self, request: Request, modalidade_pk: int, seguradora_pk: int) -> Response:
+    def delete(
+        self, request: Request, modalidade_pk: int, seguradora_pk: int
+    ) -> Response:
         vinculo = self._get_object(modalidade_pk, seguradora_pk)
         services.modalidade_seguradora_delete(vinculo=vinculo)
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -150,9 +156,9 @@ class MatrizView(APIView):
         vinculos = selectors.modalidade_seguradora_list().filter(ativo=True)
         indice: dict[int, dict[str, str]] = {}
         for vinculo in vinculos:
-            indice.setdefault(vinculo.modalidade_id, {})[
-                str(vinculo.seguradora_id)
-            ] = vinculo.codigo_seguradora
+            indice.setdefault(vinculo.modalidade_id, {})[str(vinculo.seguradora_id)] = (
+                vinculo.codigo_seguradora
+            )
 
         linhas = [
             {
@@ -171,9 +177,7 @@ class MatrizView(APIView):
         return Response(
             _envelope(
                 {
-                    "seguradoras": [
-                        {"id": s.id, "nome": s.nome} for s in seguradoras
-                    ],
+                    "seguradoras": [{"id": s.id, "nome": s.nome} for s in seguradoras],
                     "modalidades": linhas,
                 }
             )

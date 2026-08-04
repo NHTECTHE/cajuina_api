@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.exceptions import NotFound
-from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -54,11 +54,11 @@ class ApoliceListView(APIView):
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
         tomador = request.query_params.get("tomador")
-        
+
         tomador_id = None
         if tomador and tomador.isdigit():
             tomador_id = int(tomador)
-            
+
         apolices = selectors.apolice_list(search=search, tomador_id=tomador_id)
         serializer = ApoliceSerializer(apolices, many=True)
         return Response(_envelope(serializer.data))

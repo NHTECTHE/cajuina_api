@@ -4,9 +4,7 @@ from django.db import models
 
 class Notificacao(models.Model):
     usuario = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="notificacoes"
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="notificacoes"
     )
     titulo = models.CharField(max_length=255)
     mensagem = models.TextField()

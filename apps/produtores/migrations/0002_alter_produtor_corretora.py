@@ -3,7 +3,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("corretores", "0001_initial"),
         ("produtores", "0001_initial"),

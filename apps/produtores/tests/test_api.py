@@ -11,6 +11,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -23,7 +24,11 @@ def user(db):
 
 @pytest.fixture
 def auth_client(client, user):
-    resp = client.post(reverse("token_obtain_pair"), {"username": "tester", "password": "senha123"}, format="json")
+    resp = client.post(
+        reverse("token_obtain_pair"),
+        {"username": "tester", "password": "senha123"},
+        format="json",
+    )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
@@ -58,6 +63,7 @@ def produtor_com_corretora(db, corretor):
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestProdutorAutenticacao:
     """Endpoints sem token devem retornar 401 — nunca expor dados."""
@@ -67,7 +73,9 @@ class TestProdutorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_criar_sem_token_retorna_401(self, client):
-        resp = client.post(reverse("produtor-list-create"), {"nome": "X"}, format="json")
+        resp = client.post(
+            reverse("produtor-list-create"), {"nome": "X"}, format="json"
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_detalhe_sem_token_retorna_401(self, client, produtor):
@@ -75,7 +83,11 @@ class TestProdutorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_editar_sem_token_retorna_401(self, client, produtor):
-        resp = client.patch(reverse("produtor-detail", args=[produtor.pk]), {"nome": "Hacker"}, format="json")
+        resp = client.patch(
+            reverse("produtor-detail", args=[produtor.pk]),
+            {"nome": "Hacker"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_excluir_sem_token_retorna_401(self, client, produtor):
@@ -84,6 +96,7 @@ class TestProdutorAutenticacao:
 
 
 # ─── Campos obrigatórios ──────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestProdutorCamposObrigatorios:
@@ -112,6 +125,7 @@ class TestProdutorCamposObrigatorios:
 
 
 # ─── Corretora FK ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestProdutorCorretora:
@@ -165,16 +179,21 @@ class TestProdutorCorretora:
         assert resp.data["data"]["corretora_id"] is None
         assert resp.data["data"]["corretora_nome"] is None
 
-    def test_excluir_corretora_nao_exclui_produtor(self, auth_client, produtor_com_corretora, corretor):
+    def test_excluir_corretora_nao_exclui_produtor(
+        self, auth_client, produtor_com_corretora, corretor
+    ):
         corretor.delete()
         produtor_com_corretora.refresh_from_db()
         assert produtor_com_corretora.corretora is None
-        resp = auth_client.get(reverse("produtor-detail", args=[produtor_com_corretora.pk]))
+        resp = auth_client.get(
+            reverse("produtor-detail", args=[produtor_com_corretora.pk])
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert resp.data["data"]["corretora_id"] is None
 
 
 # ─── Validação de percentual ──────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestProdutorPercentual:
@@ -223,6 +242,7 @@ class TestProdutorPercentual:
 
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestProdutorCRUD:
@@ -301,20 +321,25 @@ class TestProdutorCRUD:
 
 # ─── Busca ────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.django_db
 class TestProdutorBusca:
     """Search deve filtrar por nome e nome da corretora (FK)."""
 
     def test_busca_por_nome(self, auth_client, produtor, db):
         Produtor.objects.create(nome="Totalmente Diferente")
-        resp = auth_client.get(reverse("produtor-list-create"), {"search": "Produtor Teste"})
+        resp = auth_client.get(
+            reverse("produtor-list-create"), {"search": "Produtor Teste"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         nomes = [p["nome"] for p in resp.data["data"]]
         assert all("Produtor Teste" in n for n in nomes)
 
     def test_busca_por_nome_corretora(self, auth_client, produtor_com_corretora, db):
         Produtor.objects.create(nome="Outro sem corretora")
-        resp = auth_client.get(reverse("produtor-list-create"), {"search": "Corretora ABC"})
+        resp = auth_client.get(
+            reverse("produtor-list-create"), {"search": "Corretora ABC"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert len(resp.data["data"]) == 1
         assert resp.data["data"][0]["corretora_nome"] == "Corretora ABC"
@@ -333,6 +358,7 @@ class TestProdutorBusca:
 
 
 # ─── Recebimento ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestProdutorRecebimento:

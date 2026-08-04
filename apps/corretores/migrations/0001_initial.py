@@ -4,36 +4,60 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Corretor',
+            name="Corretor",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cpf_cnpj', models.CharField(max_length=18, unique=True)),
-                ('nome', models.CharField(max_length=255)),
-                ('recebimento', models.CharField(blank=True, choices=[('pix', 'PIX'), ('ted', 'TED'), ('doc', 'DOC'), ('boleto', 'Boleto')], default='', max_length=20)),
-                ('percentual', models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True)),
-                ('banco', models.CharField(blank=True, default='', max_length=100)),
-                ('agencia', models.CharField(blank=True, default='', max_length=20)),
-                ('conta', models.CharField(blank=True, default='', max_length=30)),
-                ('email', models.EmailField(blank=True, default='', max_length=254)),
-                ('telefone', models.CharField(blank=True, default='', max_length=20)),
-                ('url_saida', models.URLField(blank=True, default='', max_length=500)),
-                ('ativo', models.BooleanField(default=True)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('atualizado_em', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("cpf_cnpj", models.CharField(max_length=18, unique=True)),
+                ("nome", models.CharField(max_length=255)),
+                (
+                    "recebimento",
+                    models.CharField(
+                        blank=True,
+                        choices=[
+                            ("pix", "PIX"),
+                            ("ted", "TED"),
+                            ("doc", "DOC"),
+                            ("boleto", "Boleto"),
+                        ],
+                        default="",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "percentual",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=5, null=True
+                    ),
+                ),
+                ("banco", models.CharField(blank=True, default="", max_length=100)),
+                ("agencia", models.CharField(blank=True, default="", max_length=20)),
+                ("conta", models.CharField(blank=True, default="", max_length=30)),
+                ("email", models.EmailField(blank=True, default="", max_length=254)),
+                ("telefone", models.CharField(blank=True, default="", max_length=20)),
+                ("url_saida", models.URLField(blank=True, default="", max_length=500)),
+                ("ativo", models.BooleanField(default=True)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Corretor',
-                'verbose_name_plural': 'Corretores',
-                'db_table': 'corretores',
-                'ordering': ['nome'],
+                "verbose_name": "Corretor",
+                "verbose_name_plural": "Corretores",
+                "db_table": "corretores",
+                "ordering": ["nome"],
             },
         ),
     ]

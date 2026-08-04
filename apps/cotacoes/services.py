@@ -50,7 +50,9 @@ def cotacao_calcular_premio(*, cotacao: Cotacao) -> Decimal | None:
     return _quantizar(max(calculado, Decimal(premio_minimo)))
 
 
-def cotacao_create(*, data: dict[str, Any], criado_por: object | None = None) -> Cotacao:
+def cotacao_create(
+    *, data: dict[str, Any], criado_por: object | None = None
+) -> Cotacao:
     cotacao = Cotacao(**data)
     if criado_por is not None and getattr(criado_por, "is_authenticated", False):
         cotacao.criado_por = criado_por
@@ -59,13 +61,17 @@ def cotacao_create(*, data: dict[str, Any], criado_por: object | None = None) ->
 
     User = get_user_model()
     users_to_notify = User.objects.all()
-    nome_exibicao = cotacao.tomador.nome_fantasia if cotacao.tomador.nome_fantasia else cotacao.tomador.nome
+    nome_exibicao = (
+        cotacao.tomador.nome_fantasia
+        if cotacao.tomador.nome_fantasia
+        else cotacao.tomador.nome
+    )
     for user in users_to_notify:
         Notificacao.objects.create(
             usuario=user,
             titulo="Nova cotação solicitada",
             status_badge="COTAÇÃO",
-            mensagem=nome_exibicao
+            mensagem=nome_exibicao,
         )
 
     return cotacao

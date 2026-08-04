@@ -54,22 +54,28 @@ def apolice_emitir(
 
     User = get_user_model()
     users_to_notify = User.objects.all()
-    nome_exibicao = cotacao.tomador.nome_fantasia if cotacao.tomador.nome_fantasia else cotacao.tomador.nome
+    nome_exibicao = (
+        cotacao.tomador.nome_fantasia
+        if cotacao.tomador.nome_fantasia
+        else cotacao.tomador.nome
+    )
     for user in users_to_notify:
         Notificacao.objects.create(
             usuario=user,
             titulo="Nova apólice emitida",
             status_badge="APÓLICE",
-            mensagem=nome_exibicao
+            mensagem=nome_exibicao,
         )
 
     return apolice
+
 
 def apolice_update(*, apolice: Apolice, data: dict[str, Any]) -> Apolice:
     for field, value in data.items():
         setattr(apolice, field, value)
     apolice.save()
     return apolice
+
 
 @transaction.atomic
 def apolice_delete(*, apolice: Apolice) -> None:

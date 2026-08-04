@@ -3,12 +3,12 @@ from django.urls import path
 from .views import (
     TomadorArquivoDetailView,
     TomadorArquivoListCreateView,
+    TomadorAtividadeListView,
     TomadorDetailView,
     TomadorListCreateView,
+    TomadorPremioAcumuladoView,
     TomadorSeguradoraDetailView,
     TomadorSeguradoraListView,
-    TomadorPremioAcumuladoView,
-    TomadorAtividadeListView,
 )
 
 urlpatterns = [
