@@ -6,4 +6,4 @@ class AtividadesConfig(AppConfig):
     name = "apps.atividades"
 
     def ready(self):
-        pass
+        import apps.atividades.signals  # noqa: F401
