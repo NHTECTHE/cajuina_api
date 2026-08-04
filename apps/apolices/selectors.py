@@ -11,8 +11,10 @@ def _base_qs():
     )
 
 
-def apolice_list(*, search: str = "") -> Iterable[Apolice]:
+def apolice_list(*, search: str = "", tomador_id: int | None = None) -> Iterable[Apolice]:
     qs = _base_qs()
+    if tomador_id is not None:
+        qs = qs.filter(cotacao__tomador_id=tomador_id)
     if search:
         qs = qs.filter(
             Q(numero_apolice__icontains=search)

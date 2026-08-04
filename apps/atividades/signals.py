@@ -4,7 +4,7 @@ from django.dispatch import receiver
 from apps.atividades.middleware import get_current_user
 from apps.atividades.services import atividade_create
 
-TRACKED_MODELS = ['CustomUser', 'Tomador', 'Corretor', 'Segurado', 'Produtor', 'Seguradora', 'Modalidade']
+TRACKED_MODELS = ['CustomUser', 'Tomador', 'Corretor', 'Segurado', 'Produtor', 'Seguradora', 'Modalidade', 'TomadorSeguradora']
 
 def get_entity_name(model_name):
     mapping = {
@@ -15,6 +15,7 @@ def get_entity_name(model_name):
         'Produtor': 'Produtor',
         'Seguradora': 'Seguradora',
         'Modalidade': 'Modalidade',
+        'TomadorSeguradora': 'TomadorSeguradora',
     }
     return mapping.get(model_name, model_name)
 
@@ -80,6 +81,7 @@ def log_save(sender, instance, created, **kwargs):
         usuario=user,
         acao=acao,
         entidade=entidade,
+        object_id=instance.pk,
         item=item,
         detalhes=detalhes
     )
@@ -98,6 +100,7 @@ def log_delete(sender, instance, **kwargs):
         usuario=user,
         acao="EXCLUSÃO",
         entidade=entidade,
+        object_id=instance.pk,
         item=item,
         detalhes=""
     )

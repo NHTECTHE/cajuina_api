@@ -64,3 +64,17 @@ def apolice_emitir(
         )
 
     return apolice
+
+def apolice_update(*, apolice: Apolice, data: dict[str, Any]) -> Apolice:
+    for field, value in data.items():
+        setattr(apolice, field, value)
+    apolice.save()
+    return apolice
+
+@transaction.atomic
+def apolice_delete(*, apolice: Apolice) -> None:
+    # Se a apólice é excluída, a cotação volta para o status de aprovada
+    cotacao = apolice.cotacao
+    cotacao.status = Cotacao.STATUS_APROVADO
+    cotacao.save(update_fields=["status", "atualizado_em"])
+    apolice.delete()

@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.exceptions import NotFound
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, MultiPartParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -53,13 +53,20 @@ class ApoliceListView(APIView):
 
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
-        apolices = selectors.apolice_list(search=search)
+        tomador = request.query_params.get("tomador")
+        
+        tomador_id = None
+        if tomador and tomador.isdigit():
+            tomador_id = int(tomador)
+            
+        apolices = selectors.apolice_list(search=search, tomador_id=tomador_id)
         serializer = ApoliceSerializer(apolices, many=True)
         return Response(_envelope(serializer.data))
 
 
 class ApoliceDetailView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request: Request, pk: int) -> Response:
         try:
@@ -68,3 +75,28 @@ class ApoliceDetailView(APIView):
             raise NotFound(detail="Apólice não encontrada.") from None
         serializer = ApoliceSerializer(apolice)
         return Response(_envelope(serializer.data))
+
+    def patch(self, request: Request, pk: int) -> Response:
+        try:
+            apolice = selectors.apolice_get(pk=pk)
+        except Apolice.DoesNotExist:
+            raise NotFound(detail="Apólice não encontrada.") from None
+
+        serializer = ApoliceSerializer(apolice, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+
+        apolice = services.apolice_update(
+            apolice=apolice, data=serializer.validated_data
+        )
+
+        out = ApoliceSerializer(apolice)
+        return Response(_envelope(out.data))
+
+    def delete(self, request: Request, pk: int) -> Response:
+        try:
+            apolice = selectors.apolice_get(pk=pk)
+        except Apolice.DoesNotExist:
+            raise NotFound(detail="Apólice não encontrada.") from None
+
+        services.apolice_delete(apolice=apolice)
+        return Response(status=status.HTTP_204_NO_CONTENT)

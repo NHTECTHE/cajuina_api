@@ -5,3 +5,6 @@ class AtividadesConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'apps.atividades'
 
+    def ready(self):
+        import apps.atividades.signals
+

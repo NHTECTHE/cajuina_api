@@ -21,6 +21,7 @@ class Atividade(models.Model):
     usuario_username = models.CharField(max_length=150, blank=True, default="")
     acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
     entidade = models.CharField(max_length=100)
+    object_id = models.IntegerField(null=True, blank=True, db_index=True)
     item = models.CharField(max_length=255)
     detalhes = models.TextField(blank=True, default="")
     criado_em = models.DateTimeField(auto_now_add=True)
