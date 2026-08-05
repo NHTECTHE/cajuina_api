@@ -18,7 +18,6 @@ class Atividade(models.Model):
         related_name='atividades'
     )
     usuario_nome = models.CharField(max_length=255, blank=True, default="")
-    usuario_username = models.CharField(max_length=150, blank=True, default="")
     acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
     entidade = models.CharField(max_length=100)
     object_id = models.IntegerField(null=True, blank=True, db_index=True)

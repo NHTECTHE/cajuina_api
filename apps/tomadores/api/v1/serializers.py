@@ -55,6 +55,7 @@ class SocioSerializer(serializers.ModelSerializer):
 class TomadorSerializer(serializers.ModelSerializer):
     contatos_adicionais = ContatoAdicionalSerializer(many=True, required=False)
     socios = SocioSerializer(many=True, required=False)
+    criado_por_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Tomador
@@ -81,14 +82,20 @@ class TomadorSerializer(serializers.ModelSerializer):
             "observacoes",
             "contatos_adicionais",
             "socios",
+            "criado_por_nome",
             "criado_em",
             "atualizado_em",
         ]
-        read_only_fields = ["id", "criado_em", "atualizado_em"]
+        read_only_fields = ["id", "criado_por_nome", "criado_em", "atualizado_em"]
 
     def validate_cnpj(self, value: str) -> str:
         # Normalise to digits-only for uniqueness check, but store formatted
         return value.strip()
+
+    def get_criado_por_nome(self, obj) -> str | None:
+        if not obj.criado_por:
+            return None
+        return obj.criado_por.first_name or obj.criado_por.email
 
 
 class TomadorSeguradoraSerializer(serializers.ModelSerializer):

@@ -6,11 +6,11 @@ from apps.notificacoes.models import Notificacao
 from .models import ContatoAdicional, Socio, Tomador, TomadorArquivo, TomadorSeguradora
 
 
-def tomador_create(*, data: dict) -> Tomador:
+def tomador_create(*, data: dict, criado_por=None) -> Tomador:
     contatos = data.pop("contatos_adicionais", [])
     socios = data.pop("socios", [])
 
-    tomador = Tomador.objects.create(**data)
+    tomador = Tomador.objects.create(**data, criado_por=criado_por)
 
     _sync_contatos(tomador, contatos)
     _sync_socios(tomador, socios)
