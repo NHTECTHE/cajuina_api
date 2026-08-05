@@ -38,6 +38,7 @@ urlpatterns = [
     path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
     path('api/v1/atividades/', include('apps.atividades.urls')),
     path('api/v1/notificacoes/', include('apps.notificacoes.api.v1.urls')),
+    path('api/v1/dashboard/', include('apps.dashboard.api.v1.urls')),
 ]
 
 # ATENÇÃO: `static()` é no-op quando DEBUG=False (ver django/conf/urls/static.py),

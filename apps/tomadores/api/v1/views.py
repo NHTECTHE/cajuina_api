@@ -53,7 +53,10 @@ class TomadorListCreateView(APIView):
         serializer = TomadorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tomador = services.tomador_create(data=serializer.validated_data)
+        tomador = services.tomador_create(
+            data=serializer.validated_data,
+            criado_por=request.user if request.user.is_authenticated else None,
+        )
         out = TomadorSerializer(tomador)
         return Response(_envelope(out.data), status=status.HTTP_201_CREATED)
 
