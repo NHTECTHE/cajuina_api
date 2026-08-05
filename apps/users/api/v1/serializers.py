@@ -7,7 +7,6 @@ from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import serializers
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -30,10 +29,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        # O username será o próprio email para evitar conflitos de unique
-        username = validated_data['email']
         user = User(
-            username=username,
             email=validated_data['email'],
             first_name=validated_data['first_name'],
             cnpj=validated_data.get('cnpj'),
@@ -77,22 +73,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
-class EmailOrUsernameTokenSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        credential = attrs.get("username", "")
-        if "@" in credential:
-            try:
-                user_obj = User.objects.get(email=credential)
-                attrs["username"] = user_obj.username
-            except User.DoesNotExist:
-                pass
-        return super().validate(attrs)
-
-
 class UserListSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'email', 'username', 'cargo')
+        fields = ('id', 'first_name', 'email', 'cargo')
 
 
 class UserAdminSerializer(serializers.ModelSerializer):
@@ -100,15 +84,7 @@ class UserAdminSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'first_name', 'email', 'username', 'cargo', 'password')
-
-    def validate_username(self, value):
-        qs = User.objects.filter(username=value)
-        if self.instance:
-            qs = qs.exclude(pk=self.instance.pk)
-        if qs.exists():
-            raise serializers.ValidationError("Este usuário já está cadastrado.")
-        return value
+        fields = ('id', 'first_name', 'email', 'cargo', 'password')
 
     def validate_email(self, value):
         qs = User.objects.filter(email=value)

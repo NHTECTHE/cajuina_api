@@ -19,14 +19,14 @@ def client():
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(username="tester", password="senha123")
+    return User.objects.create_user(email="tester@empresa.com", password="senha123")
 
 
 @pytest.fixture
 def auth_client(client, user):
     resp = client.post(
         reverse("token_obtain_pair"),
-        {"username": "tester", "password": "senha123"},
+        {"email": "tester@empresa.com", "password": "senha123"},
         format="json",
     )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
