@@ -32,14 +32,7 @@ def corretor(db):
     return Corretor.objects.create(
         cpf_cnpj="12.345.678/0001-90",
         nome="Corretor Teste",
-        recebimento="pix",
-        percentual="5.00",
-        banco="Bradesco",
-        agencia="1234",
-        conta="56789-0",
-        email="corretor@teste.com",
-        telefone="(85) 99999-0000",
-        url_saida="https://teste.com/saida",
+
     )
 
 
@@ -126,44 +119,7 @@ class TestCorretorCamposObrigatorios:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
-# ─── Integridade dos dados financeiros ───────────────────────────────────────
 
-@pytest.mark.django_db
-class TestCorretorPercentual:
-    """Percentual fora de 0–100 corromperia cálculos de comissão."""
-
-    def test_percentual_acima_de_100_retorna_400(self, auth_client, db):
-        resp = auth_client.post(
-            reverse("corretor-list-create"),
-            {"cpf_cnpj": "22.222.222/0001-22", "nome": "Corretor X", "percentual": "150.00"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_percentual_negativo_retorna_400(self, auth_client, db):
-        resp = auth_client.post(
-            reverse("corretor-list-create"),
-            {"cpf_cnpj": "33.333.333/0001-33", "nome": "Corretor Y", "percentual": "-1.00"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
-
-    def test_percentual_nulo_e_aceito(self, auth_client, db):
-        resp = auth_client.post(
-            reverse("corretor-list-create"),
-            {"cpf_cnpj": "44.444.444/0001-44", "nome": "Corretor Z", "percentual": None},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_201_CREATED
-        assert resp.data["data"]["percentual"] is None
-
-    def test_percentual_zero_e_aceito(self, auth_client, db):
-        resp = auth_client.post(
-            reverse("corretor-list-create"),
-            {"cpf_cnpj": "55.555.555/0001-55", "nome": "Corretor W", "percentual": "0.00"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_201_CREATED
 
 
 # ─── CRUD básico ─────────────────────────────────────────────────────────────

@@ -19,8 +19,7 @@ class CorretorListCreateView(APIView):
 
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
-        ativo = request.query_params.get("ativo", "")
-        corretores = selectors.corretor_list(search=search, ativo=ativo)
+        corretores = selectors.corretor_list(search=search)
         serializer = CorretorSerializer(corretores, many=True)
         return Response(_envelope(serializer.data))
 
