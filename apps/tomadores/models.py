@@ -8,12 +8,12 @@ from django.db import models
 class Tomador(models.Model):
     # Identificação
     cnpj = models.CharField(max_length=18, unique=True)
-    nome = models.CharField(max_length=255)
+    nome = models.CharField(max_length=255, blank=True, default="")
     nome_fantasia = models.CharField(max_length=255, blank=True, default="")
 
     # Vínculo
     produtor = models.CharField(max_length=100, default="CAJUINA SEGUROS")
-    corretora = models.CharField(max_length=100, default="CAJUINA")
+    corretora = models.CharField(max_length=100, blank=True, default="CAJUINA")
 
     # Contato principal
     contato = models.CharField(max_length=100, blank=True, default="")

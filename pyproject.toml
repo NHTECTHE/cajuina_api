@@ -16,7 +16,10 @@ dependencies = [
 [tool.uv]
 dev-dependencies = [
     "pytest",
-    "pytest-django",
+    # Pin de minor: pytest-django 4.13 usa `_pre_setup_ran_eagerly`, atributo que
+    # so existe no Django 5.x, e nao declara esse limite no metadata dele. Em cima
+    # do Django 4.2 daqui ele resolve normal e quebra em runtime (281 erros).
+    "pytest-django>=4.12,<4.13",
     # Pin de minor: o conjunto de regras default do ruff muda entre releases
     # (0.16 ativou RUF012/FURB/DTZ e quebrou o CI sem mudanca de codigo).
     "ruff>=0.16,<0.17",
