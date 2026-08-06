@@ -56,4 +56,4 @@ class ApoliceSerializer(serializers.ModelSerializer):
         if not user:
             return None
         full_name = user.get_full_name() if hasattr(user, "get_full_name") else ""
-        return full_name or getattr(user, "username", None) or getattr(user, "email", None)
+        return full_name or getattr(user, "email", None)

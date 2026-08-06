@@ -1,10 +1,18 @@
+from decimal import Decimal
+
+from django.db.models import Q, Sum
+from django.utils.timezone import localtime
 from rest_framework import status
+from rest_framework.exceptions import NotFound
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.apolices.models import Apolice
+from apps.atividades.models import Atividade
+from apps.seguradoras.models import Seguradora
 from apps.tomadores import selectors, services
 from apps.tomadores.models import Tomador, TomadorArquivo, TomadorSeguradora
 
@@ -15,9 +23,18 @@ from .serializers import (
     TomadorSerializer,
 )
 
+ZERO = Decimal("0.00")
+
 
 def _envelope(data) -> dict:
     return {"data": data}
+
+
+def _get_tomador_or_404(pk: int) -> Tomador:
+    try:
+        return selectors.tomador_get(pk=pk)
+    except Tomador.DoesNotExist:
+        raise NotFound(detail="Tomador não encontrado.") from None
 
 
 class TomadorListCreateView(APIView):
@@ -36,7 +53,10 @@ class TomadorListCreateView(APIView):
         serializer = TomadorSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        tomador = services.tomador_create(data=serializer.validated_data)
+        tomador = services.tomador_create(
+            data=serializer.validated_data,
+            criado_por=request.user if request.user.is_authenticated else None,
+        )
         out = TomadorSerializer(tomador)
         return Response(_envelope(out.data), status=status.HTTP_201_CREATED)
 
@@ -200,3 +220,124 @@ class TomadorSeguradoraDetailView(APIView):
         vinculo = self._get_object(tomador_pk, seguradora_pk)
         services.tomador_seguradora_delete(vinculo=vinculo)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TomadorPremioAcumuladoView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, tomador_pk: int) -> Response:
+        _get_tomador_or_404(tomador_pk)
+
+        apolices = Apolice.objects.filter(cotacao__tomador_id=tomador_pk)
+        premio_total = apolices.aggregate(total=Sum("valor_seguradora"))["total"] or ZERO
+
+        # Um único agregado por seguradora em vez de um `aggregate` por linha do
+        # loop — o custo deixa de crescer com a quantidade de seguradoras ativas.
+        totais = {
+            row["seguradora_id"]: row["total"]
+            for row in apolices.values("seguradora_id").annotate(
+                total=Sum("valor_seguradora")
+            )
+        }
+
+        seguradoras_list = [
+            {
+                "id": seguradora.id,
+                "nome": seguradora.nome,
+                "total": str(totais.get(seguradora.id) or ZERO),
+            }
+            for seguradora in Seguradora.objects.filter(ativo=True).order_by("nome")
+        ]
+
+        return Response(
+            _envelope(
+                {
+                    "premio_total": str(premio_total),
+                    # `flex` ainda não tem regra de cálculo definida; `null`
+                    # distingue "não calculado" de um zero legítimo.
+                    "flex": None,
+                    "seguradoras": seguradoras_list,
+                }
+            )
+        )
+
+
+class TomadorAtividadeListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    PAGE_SIZE = 10
+
+    SITUACAO_TOMADOR = {
+        "CRIAÇÃO": "Criação do Cadastro",
+        "ATUALIZAÇÃO": "Atualizar Dados",
+    }
+
+    def get(self, request: Request, tomador_pk: int) -> Response:
+        _get_tomador_or_404(tomador_pk)
+
+        ts_ids = TomadorSeguradora.objects.filter(
+            tomador_id=tomador_pk
+        ).values_list("id", flat=True)
+
+        atividades = Atividade.objects.filter(
+            Q(entidade="Tomador", object_id=tomador_pk)
+            | Q(entidade="TomadorSeguradora", object_id__in=ts_ids)
+        ).order_by("-criado_em")
+
+        page = self._get_page(request)
+        total = atividades.count()
+        start = (page - 1) * self.PAGE_SIZE
+        end = start + self.PAGE_SIZE
+
+        # O slice é aplicado ao queryset (vira LIMIT/OFFSET) antes da formatação,
+        # então só as linhas da página atual saem do banco.
+        results = [self._formatar(atividade) for atividade in atividades[start:end]]
+
+        return Response(
+            _envelope(
+                {
+                    "count": total,
+                    "next": f"?page={page + 1}" if end < total else None,
+                    "previous": f"?page={page - 1}" if page > 1 else None,
+                    "results": results,
+                }
+            )
+        )
+
+    def _get_page(self, request: Request) -> int:
+        """Página pedida, normalizada. Entrada inválida cai para 1 em vez de 500."""
+        try:
+            page = int(request.query_params.get("page", 1))
+        except (TypeError, ValueError):
+            return 1
+        return max(page, 1)
+
+    def _situacao(self, atividade: Atividade) -> str:
+        if atividade.entidade == "Tomador":
+            return self.SITUACAO_TOMADOR.get(atividade.acao, atividade.acao)
+
+        if atividade.entidade == "TomadorSeguradora" and atividade.acao in (
+            "CRIAÇÃO",
+            "ATUALIZAÇÃO",
+        ):
+            # `item` vem de TomadorSeguradora.__str__: "Tomador — Seguradora: 5.00%"
+            partes = atividade.item.split(" — ")
+            seguradora = partes[1].split(":")[0].strip() if len(partes) > 1 else ""
+            return (
+                f"Atualização de Taxas - {seguradora}"
+                if seguradora
+                else "Atualização de Taxas"
+            )
+
+        return atividade.acao
+
+    def _formatar(self, atividade: Atividade) -> dict:
+        criado_em = localtime(atividade.criado_em)
+        return {
+            "id": atividade.id,
+            "data": criado_em.strftime("%d/%m/%Y"),
+            "hora": criado_em.strftime("%H:%M"),
+            "situacao": self._situacao(atividade),
+            "usuario": atividade.usuario_nome or "Sistema",
+            "detalhes": atividade.detalhes,
+        }

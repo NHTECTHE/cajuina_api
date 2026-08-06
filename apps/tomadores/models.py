@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -33,6 +34,15 @@ class Tomador(models.Model):
     # Configurações
     ativar_cotacao = models.BooleanField(default=False)
     observacoes = models.TextField(blank=True, default="")
+
+    criado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        related_name="tomadores_criados",
+        null=True,
+        blank=True,
+        help_text="Usuário que cadastrou o tomador. Nulo para registros anteriores ao campo.",
+    )
 
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

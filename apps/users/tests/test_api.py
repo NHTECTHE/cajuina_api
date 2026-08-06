@@ -14,19 +14,19 @@ def api_client():
 def create_user(db):
     def make_user(**kwargs):
         kwargs.setdefault('password', 'senha')
-        if 'username' not in kwargs:
-            kwargs['username'] = 'admin'
+        if 'email' not in kwargs:
+            kwargs['email'] = 'admin@empresa.com'
         return User.objects.create_user(**kwargs)
     return make_user
 
 @pytest.mark.django_db
 class TestAuthAPI:
     def test_obtain_token_pair(self, api_client, create_user):
-        create_user(username='testuser', password='testpassword')
+        create_user(email='testuser@empresa.com', password='testpassword')
         url = reverse('token_obtain_pair')
         
         response = api_client.post(url, {
-            'username': 'testuser',
+            'email': 'testuser@empresa.com',
             'password': 'testpassword'
         }, format='json')
         
@@ -35,11 +35,11 @@ class TestAuthAPI:
         assert 'refresh' in response.data
 
     def test_obtain_token_pair_invalid_credentials(self, api_client, create_user):
-        create_user(username='testuser', password='testpassword')
+        create_user(email='testuser@empresa.com', password='testpassword')
         url = reverse('token_obtain_pair')
         
         response = api_client.post(url, {
-            'username': 'testuser',
+            'email': 'testuser@empresa.com',
             'password': 'wrongpassword'
         }, format='json')
         
@@ -47,11 +47,11 @@ class TestAuthAPI:
         assert 'access' not in response.data
 
     def test_refresh_token(self, api_client, create_user):
-        create_user(username='testuser', password='testpassword')
+        create_user(email='testuser@empresa.com', password='testpassword')
         url_obtain = reverse('token_obtain_pair')
         
         response_obtain = api_client.post(url_obtain, {
-            'username': 'testuser',
+            'email': 'testuser@empresa.com',
             'password': 'testpassword'
         }, format='json')
         
@@ -71,49 +71,15 @@ class TestCustomUserCargo:
     """Campo cargo deve existir e aceitar apenas os valores definidos."""
 
     def test_cargo_default_e_usuario(self, db):
-        user = User.objects.create_user(username="x", password="123", email="x@x.com")
+        user = User.objects.create_user(password="123", email="x@x.com")
         assert user.cargo == "usuario"
 
     def test_cargo_aceita_choices_validos(self, db):
         for cargo in ["administrador", "financeiro", "usuario", "corretor", "produtor", "auto", "tomador"]:
             user = User.objects.create_user(
-                username=f"u_{cargo}", password="123", email=f"{cargo}@x.com", cargo=cargo
+                password="123", email=f"{cargo}@x.com", cargo=cargo
             )
             assert user.cargo == cargo
-
-
-@pytest.mark.django_db
-class TestLoginEmailOuUsername:
-    """Usuário deve conseguir logar tanto com username quanto com email."""
-
-    def test_login_com_username(self, api_client, db):
-        User.objects.create_user(username="joao", email="joao@empresa.com", password="senha123")
-        resp = api_client.post(
-            reverse("token_obtain_pair"),
-            {"username": "joao", "password": "senha123"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_200_OK
-        assert "access" in resp.data
-
-    def test_login_com_email(self, api_client, db):
-        User.objects.create_user(username="joao", email="joao@empresa.com", password="senha123")
-        resp = api_client.post(
-            reverse("token_obtain_pair"),
-            {"username": "joao@empresa.com", "password": "senha123"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_200_OK
-        assert "access" in resp.data
-
-    def test_login_com_credencial_invalida_retorna_401(self, api_client, db):
-        User.objects.create_user(username="joao", email="joao@empresa.com", password="senha123")
-        resp = api_client.post(
-            reverse("token_obtain_pair"),
-            {"username": "joao", "password": "errada"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
 
 # ─── Fixtures para CRUD de usuários ──────────────────────────────────────────
@@ -122,15 +88,15 @@ class TestLoginEmailOuUsername:
 def auth_client_user(db):
     from rest_framework.test import APIClient
     client = APIClient()
-    User.objects.create_user(username="admin", email="admin@t.com", password="admin123")
-    resp = client.post(reverse("token_obtain_pair"), {"username": "admin", "password": "admin123"}, format="json")
+    User.objects.create_user(email="admin@t.com", password="admin123")
+    resp = client.post(reverse("token_obtain_pair"), {"email": "admin@t.com", "password": "admin123"}, format="json")
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
 @pytest.fixture
 def outro_usuario(db):
     return User.objects.create_user(
-        username="maria", email="maria@empresa.com", password="senha123",
+        email="maria@empresa.com", password="senha123",
         first_name="Maria Silva", cargo="financeiro"
     )
 
@@ -163,35 +129,27 @@ class TestUsuarioCRUD:
     def test_criar_usuario_com_senha_padrao(self, auth_client_user, db):
         resp = auth_client_user.post(
             reverse("usuario-list-create"),
-            {"first_name": "João", "email": "joao@emp.com", "username": "joao.silva", "cargo": "corretor"},
+            {"first_name": "João", "email": "joao@emp.com", "cargo": "corretor"},
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
-        user = User.objects.get(username="joao.silva")
+        user = User.objects.get(email="joao@emp.com")
         assert user.check_password("123456")
 
     def test_criar_usuario_com_senha_personalizada(self, auth_client_user, db):
         resp = auth_client_user.post(
             reverse("usuario-list-create"),
-            {"first_name": "Ana", "email": "ana@emp.com", "username": "ana.lima", "cargo": "usuario", "password": "minhaSenha99"},
+            {"first_name": "Ana", "email": "ana@emp.com", "cargo": "usuario", "password": "minhaSenha99"},
             format="json",
         )
         assert resp.status_code == status.HTTP_201_CREATED
-        user = User.objects.get(username="ana.lima")
+        user = User.objects.get(email="ana@emp.com")
         assert user.check_password("minhaSenha99")
-
-    def test_username_duplicado_retorna_400(self, auth_client_user, outro_usuario):
-        resp = auth_client_user.post(
-            reverse("usuario-list-create"),
-            {"first_name": "Outro", "email": "outro@emp.com", "username": "maria", "cargo": "usuario"},
-            format="json",
-        )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
     def test_email_duplicado_retorna_400(self, auth_client_user, outro_usuario):
         resp = auth_client_user.post(
             reverse("usuario-list-create"),
-            {"first_name": "Outro", "email": "maria@empresa.com", "username": "outrouser", "cargo": "usuario"},
+            {"first_name": "Outro", "email": "maria@empresa.com", "cargo": "usuario"},
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
@@ -242,3 +200,36 @@ class TestUsuarioCRUD:
     def test_detalhe_inexistente_retorna_404(self, auth_client_user, db):
         resp = auth_client_user.get(reverse("usuario-detail", args=[99999]))
         assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.django_db
+class TestEmailObrigatorioEUnico:
+    def test_criar_usuario_sem_email_retorna_400(self, auth_client_user):
+        resp = auth_client_user.post(
+            reverse("usuario-list-create"),
+            {"first_name": "Sem Email", "cargo": "usuario"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "email" in resp.data
+
+    def test_criar_usuario_com_email_duplicado_retorna_400(self, auth_client_user, outro_usuario):
+        resp = auth_client_user.post(
+            reverse("usuario-list-create"),
+            {"first_name": "Outro", "email": "maria@empresa.com", "cargo": "usuario"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert "email" in resp.data
+
+    def test_editar_mantendo_o_proprio_email_funciona(self, auth_client_user, outro_usuario):
+        resp = auth_client_user.patch(
+            reverse("usuario-detail", args=[outro_usuario.pk]),
+            {"first_name": "Maria Silva", "email": "maria@empresa.com"},
+            format="json",
+        )
+
+        assert resp.status_code == status.HTTP_200_OK
+        assert resp.data["data"]["first_name"] == "Maria Silva"

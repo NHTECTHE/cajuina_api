@@ -11,7 +11,6 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .serializers import (
-    EmailOrUsernameTokenSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetSerializer,
     UserAdminSerializer,
@@ -78,25 +77,19 @@ class UserMeView(APIView):
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    serializer_class = EmailOrUsernameTokenSerializer
-
     def post(self, request, *args, **kwargs):
         res = super().post(request, *args, **kwargs)
         if res.status_code == 200:
             try:
-                username = request.data.get("username", "")
-                user_obj = None
-                if "@" in username:
-                    user_obj = User.objects.filter(email=username).first()
-                if not user_obj:
-                    user_obj = User.objects.filter(username=username).first()
+                email = request.data.get("email", "")
+                user_obj = User.objects.filter(email=email).first()
                 if user_obj:
                     from apps.atividades.services import atividade_create
                     atividade_create(
                         usuario=user_obj,
                         acao="LOGIN",
                         entidade="Autenticacao",
-                        item=f"{user_obj.first_name if user_obj.first_name else user_obj.username}",
+                        item=user_obj.first_name or user_obj.email,
                         detalhes="Status: sucesso | Origem: web | HTTP: 200"
                     )
             except Exception as e:
@@ -116,8 +109,7 @@ class UserListCreateView(APIView):
         if search:
             qs = qs.filter(
                 Q(first_name__icontains=search) |
-                Q(email__icontains=search) |
-                Q(username__icontains=search)
+                Q(email__icontains=search)
             )
         serializer = UserListSerializer(qs, many=True)
         return Response(_envelope(serializer.data))
