@@ -7,6 +7,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from django.core.mail import send_mail
+from django.conf import settings
+
 from apps.apolices import selectors, services
 from apps.apolices.models import Apolice
 from apps.cotacoes import selectors as cotacoes_selectors
@@ -100,3 +103,31 @@ class ApoliceDetailView(APIView):
 
         services.apolice_delete(apolice=apolice)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class ApoliceEnviarEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        try:
+            apolice = selectors.apolice_get(pk=pk)
+        except Apolice.DoesNotExist:
+            raise NotFound(detail="Apólice não encontrada.") from None
+
+        assunto = request.data.get('assunto', 'Apólice Emitida')
+        mensagem = request.data.get('mensagem', '')
+        destinatario = request.data.get('destinatario', '')
+        
+        if not destinatario or not mensagem:
+            return Response({"detail": "Destinatário e mensagem são obrigatórios."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            send_mail(
+                subject=assunto,
+                message=mensagem,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario],
+                fail_silently=False,
+            )
+            return Response({"detail": "E-mail enviado com sucesso."})
+        except Exception as e:
+            return Response({"detail": f"Erro ao enviar e-mail: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

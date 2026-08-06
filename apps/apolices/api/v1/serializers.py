@@ -8,6 +8,7 @@ class ApoliceSerializer(serializers.ModelSerializer):
     seguradora = serializers.PrimaryKeyRelatedField(queryset=Seguradora.objects.all())
 
     seguradora_nome = serializers.CharField(source="seguradora.nome", read_only=True)
+    tomador = serializers.IntegerField(source="cotacao.tomador.id", read_only=True)
     tomador_nome = serializers.CharField(source="cotacao.tomador.nome", read_only=True)
     tomador_cnpj = serializers.CharField(source="cotacao.tomador.cnpj", read_only=True)
     modalidade_nome = serializers.CharField(source="cotacao.modalidade.nome", read_only=True)
@@ -24,6 +25,7 @@ class ApoliceSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "cotacao",
+            "tomador",
             "tomador_nome",
             "tomador_cnpj",
             "modalidade_nome",
