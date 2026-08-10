@@ -39,6 +39,7 @@ class SeguradoDetailView(APIView):
             return selectors.segurado_get(pk=pk)
         except Segurado.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Segurado não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
@@ -50,7 +51,9 @@ class SeguradoDetailView(APIView):
         segurado = self._get_object(pk)
         serializer = SeguradoSerializer(segurado, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        segurado = services.segurado_update(segurado=segurado, data=serializer.validated_data)
+        segurado = services.segurado_update(
+            segurado=segurado, data=serializer.validated_data
+        )
         out = SeguradoSerializer(segurado)
         return Response(_envelope(out.data))
 

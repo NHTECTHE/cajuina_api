@@ -4,28 +4,29 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('seguradoras', '0001_initial'),
+        ("seguradoras", "0001_initial"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='seguradora',
-            name='valor_execucao',
+            model_name="seguradora",
+            name="valor_execucao",
         ),
         migrations.RemoveField(
-            model_name='seguradora',
-            name='valor_licitacao',
+            model_name="seguradora",
+            name="valor_licitacao",
         ),
         migrations.AddField(
-            model_name='seguradora',
-            name='meta',
-            field=models.DecimalField(blank=True, decimal_places=2, max_digits=14, null=True),
+            model_name="seguradora",
+            name="meta",
+            field=models.DecimalField(
+                blank=True, decimal_places=2, max_digits=14, null=True
+            ),
         ),
         migrations.AddField(
-            model_name='seguradora',
-            name='premio_minimo',
+            model_name="seguradora",
+            name="premio_minimo",
             field=models.DecimalField(decimal_places=2, default=0, max_digits=14),
             preserve_default=False,
         ),

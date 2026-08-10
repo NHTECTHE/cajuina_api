@@ -4,15 +4,14 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tomadores', '0008_remove_tomador_corretora'),
+        ("tomadores", "0008_remove_tomador_corretora"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tomador',
-            name='corretora',
-            field=models.CharField(blank=True, default='CAJUINA', max_length=100),
+            model_name="tomador",
+            name="corretora",
+            field=models.CharField(blank=True, default="CAJUINA", max_length=100),
         ),
     ]

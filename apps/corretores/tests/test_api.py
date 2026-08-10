@@ -10,6 +10,7 @@ User = get_user_model()
 
 # ─── Fixtures ────────────────────────────────────────────────────────────────
 
+
 @pytest.fixture
 def client():
     return APIClient()
@@ -22,7 +23,11 @@ def user(db):
 
 @pytest.fixture
 def auth_client(client, user):
-    resp = client.post(reverse("token_obtain_pair"), {"email": "tester@empresa.com", "password": "senha123"}, format="json")
+    resp = client.post(
+        reverse("token_obtain_pair"),
+        {"email": "tester@empresa.com", "password": "senha123"},
+        format="json",
+    )
     client.credentials(HTTP_AUTHORIZATION=f"Bearer {resp.data['access']}")
     return client
 
@@ -32,11 +37,11 @@ def corretor(db):
     return Corretor.objects.create(
         cpf_cnpj="12.345.678/0001-90",
         nome="Corretor Teste",
-
     )
 
 
 # ─── Autenticação ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorAutenticacao:
@@ -47,7 +52,11 @@ class TestCorretorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_criar_sem_token_retorna_401(self, client):
-        resp = client.post(reverse("corretor-list-create"), {"cpf_cnpj": "000", "nome": "X"}, format="json")
+        resp = client.post(
+            reverse("corretor-list-create"),
+            {"cpf_cnpj": "000", "nome": "X"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_detalhe_sem_token_retorna_401(self, client, corretor):
@@ -55,7 +64,11 @@ class TestCorretorAutenticacao:
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_editar_sem_token_retorna_401(self, client, corretor):
-        resp = client.patch(reverse("corretor-detail", args=[corretor.pk]), {"nome": "Hacker"}, format="json")
+        resp = client.patch(
+            reverse("corretor-detail", args=[corretor.pk]),
+            {"nome": "Hacker"},
+            format="json",
+        )
         assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_excluir_sem_token_retorna_401(self, client, corretor):
@@ -64,6 +77,7 @@ class TestCorretorAutenticacao:
 
 
 # ─── Unicidade de CPF/CNPJ ────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorUnicidade:
@@ -86,7 +100,9 @@ class TestCorretorUnicidade:
         )
         assert resp.status_code == status.HTTP_201_CREATED
 
-    def test_atualizar_cpf_cnpj_para_existente_retorna_400(self, auth_client, corretor, db):
+    def test_atualizar_cpf_cnpj_para_existente_retorna_400(
+        self, auth_client, corretor, db
+    ):
         outro = Corretor.objects.create(cpf_cnpj="00.000.000/0001-00", nome="Outro")
         resp = auth_client.patch(
             reverse("corretor-detail", args=[outro.pk]),
@@ -97,6 +113,7 @@ class TestCorretorUnicidade:
 
 
 # ─── Campos obrigatórios ──────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorCamposObrigatorios:
@@ -119,10 +136,8 @@ class TestCorretorCamposObrigatorios:
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
 
-
-
-
 # ─── CRUD básico ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.django_db
 class TestCorretorCRUD:
@@ -134,8 +149,12 @@ class TestCorretorCRUD:
         assert len(resp.data["data"]) == 1
 
     def test_busca_por_nome(self, auth_client, corretor, db):
-        Corretor.objects.create(cpf_cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente")
-        resp = auth_client.get(reverse("corretor-list-create"), {"search": "Corretor Teste"})
+        Corretor.objects.create(
+            cpf_cnpj="99.999.999/0001-99", nome="Outro Totalmente Diferente"
+        )
+        resp = auth_client.get(
+            reverse("corretor-list-create"), {"search": "Corretor Teste"}
+        )
         assert resp.status_code == status.HTTP_200_OK
         assert all("Corretor Teste" in c["nome"] for c in resp.data["data"])
 

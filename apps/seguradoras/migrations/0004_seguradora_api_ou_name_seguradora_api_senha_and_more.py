@@ -4,30 +4,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('seguradoras', '0003_seguradora_logo'),
+        ("seguradoras", "0003_seguradora_logo"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='seguradora',
-            name='api_ou_name',
-            field=models.CharField(blank=True, default='', max_length=255, verbose_name='OUName'),
+            model_name="seguradora",
+            name="api_ou_name",
+            field=models.CharField(
+                blank=True, default="", max_length=255, verbose_name="OUName"
+            ),
         ),
         migrations.AddField(
-            model_name='seguradora',
-            name='api_senha',
-            field=models.CharField(blank=True, default='', max_length=255),
+            model_name="seguradora",
+            name="api_senha",
+            field=models.CharField(blank=True, default="", max_length=255),
         ),
         migrations.AddField(
-            model_name='seguradora',
-            name='api_source_app',
-            field=models.CharField(blank=True, default='', max_length=255, verbose_name='SourceApp'),
+            model_name="seguradora",
+            name="api_source_app",
+            field=models.CharField(
+                blank=True, default="", max_length=255, verbose_name="SourceApp"
+            ),
         ),
         migrations.AddField(
-            model_name='seguradora',
-            name='api_usuario',
-            field=models.CharField(blank=True, default='', max_length=255),
+            model_name="seguradora",
+            name="api_usuario",
+            field=models.CharField(blank=True, default="", max_length=255),
         ),
     ]

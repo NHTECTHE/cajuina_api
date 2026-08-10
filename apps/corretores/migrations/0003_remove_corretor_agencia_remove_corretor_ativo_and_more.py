@@ -4,46 +4,45 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('corretores', '0002_alter_corretor_recebimento'),
+        ("corretores", "0002_alter_corretor_recebimento"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='corretor',
-            name='agencia',
+            model_name="corretor",
+            name="agencia",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='ativo',
+            model_name="corretor",
+            name="ativo",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='banco',
+            model_name="corretor",
+            name="banco",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='conta',
+            model_name="corretor",
+            name="conta",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='email',
+            model_name="corretor",
+            name="email",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='percentual',
+            model_name="corretor",
+            name="percentual",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='recebimento',
+            model_name="corretor",
+            name="recebimento",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='telefone',
+            model_name="corretor",
+            name="telefone",
         ),
         migrations.RemoveField(
-            model_name='corretor',
-            name='url_saida',
+            model_name="corretor",
+            name="url_saida",
         ),
     ]

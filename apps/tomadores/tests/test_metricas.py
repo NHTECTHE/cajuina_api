@@ -166,9 +166,7 @@ class TestTomadorAtividadeList:
     def test_nao_vaza_atividade_de_tomador_homonimo(self, auth_client, tomador):
         """Regressão: o filtro por nome fazia cadastros homônimos compartilharem
         histórico. O vínculo agora é por `object_id`."""
-        homonimo = Tomador.objects.create(
-            cnpj="99.888.777/0001-66", nome=tomador.nome
-        )
+        homonimo = Tomador.objects.create(cnpj="99.888.777/0001-66", nome=tomador.nome)
         Atividade.objects.create(
             entidade="Tomador",
             object_id=homonimo.pk,

@@ -25,7 +25,9 @@ class TestCustomUserManager:
         assert user.email == "Joao@empresa.com"
 
     def test_create_superuser(self):
-        user = User.objects.create_superuser(email="admin@empresa.com", password="senha123")
+        user = User.objects.create_superuser(
+            email="admin@empresa.com", password="senha123"
+        )
 
         assert user.is_staff is True
         assert user.is_superuser is True

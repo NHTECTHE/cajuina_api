@@ -4,15 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tomadores', '0003_tomadorseguradora_and_more'),
+        ("tomadores", "0003_tomadorseguradora_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tomadorseguradora',
-            name='status',
-            field=models.CharField(choices=[('cadastro_ok', 'Cadastro OK'), ('sem_cadastro', 'Sem cadastro'), ('outro_corretor', 'Outro corretor'), ('sem_aceitacao', 'Sem aceitação')], default='sem_cadastro', max_length=20),
+            model_name="tomadorseguradora",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("cadastro_ok", "Cadastro OK"),
+                    ("sem_cadastro", "Sem cadastro"),
+                    ("outro_corretor", "Outro corretor"),
+                    ("sem_aceitacao", "Sem aceitação"),
+                ],
+                default="sem_cadastro",
+                max_length=20,
+            ),
         ),
     ]

@@ -4,36 +4,48 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Segurado',
+            name="Segurado",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('cnpj', models.CharField(max_length=18, unique=True)),
-                ('natureza_juridica', models.CharField(blank=True, default='', max_length=100)),
-                ('nome', models.CharField(max_length=255)),
-                ('endereco', models.CharField(blank=True, default='', max_length=255)),
-                ('cidade', models.CharField(blank=True, default='', max_length=100)),
-                ('estado', models.CharField(blank=True, default='', max_length=2)),
-                ('bairro', models.CharField(blank=True, default='', max_length=100)),
-                ('numero', models.CharField(blank=True, default='', max_length=20)),
-                ('cep', models.CharField(blank=True, default='', max_length=10)),
-                ('complemento', models.CharField(blank=True, default='', max_length=100)),
-                ('observacoes', models.TextField(blank=True, default='')),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('atualizado_em', models.DateTimeField(auto_now=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("cnpj", models.CharField(max_length=18, unique=True)),
+                (
+                    "natureza_juridica",
+                    models.CharField(blank=True, default="", max_length=100),
+                ),
+                ("nome", models.CharField(max_length=255)),
+                ("endereco", models.CharField(blank=True, default="", max_length=255)),
+                ("cidade", models.CharField(blank=True, default="", max_length=100)),
+                ("estado", models.CharField(blank=True, default="", max_length=2)),
+                ("bairro", models.CharField(blank=True, default="", max_length=100)),
+                ("numero", models.CharField(blank=True, default="", max_length=20)),
+                ("cep", models.CharField(blank=True, default="", max_length=10)),
+                (
+                    "complemento",
+                    models.CharField(blank=True, default="", max_length=100),
+                ),
+                ("observacoes", models.TextField(blank=True, default="")),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'verbose_name': 'Segurado',
-                'verbose_name_plural': 'Segurados',
-                'db_table': 'segurados',
-                'ordering': ['nome'],
+                "verbose_name": "Segurado",
+                "verbose_name_plural": "Segurados",
+                "db_table": "segurados",
+                "ordering": ["nome"],
             },
         ),
     ]

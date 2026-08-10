@@ -20,7 +20,9 @@ class TomadorArquivoSerializer(serializers.ModelSerializer):
 
     def validate_arquivo(self, value):
         if value.size > MAX_ARQUIVO_SIZE:
-            raise serializers.ValidationError("Arquivo excede o tamanho máximo de 20MB.")
+            raise serializers.ValidationError(
+                "Arquivo excede o tamanho máximo de 20MB."
+            )
         return value
 
 
@@ -38,7 +40,9 @@ class SocioSerializer(serializers.ModelSerializer):
         required=False,
     )
     # Sobrescrevemos qualificacao para ignorar o choices_validation se vier dado externo (ex: "10-Diretor")
-    qualificacao = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    qualificacao = serializers.CharField(
+        max_length=50, required=False, allow_blank=True
+    )
 
     class Meta:
         model = Socio
@@ -103,7 +107,9 @@ class TomadorSeguradoraSerializer(serializers.ModelSerializer):
 
     # Leitura: dados prontos para a tela de taxas do tomador.
     seguradora_nome = serializers.CharField(source="seguradora.nome", read_only=True)
-    seguradora_ativo = serializers.BooleanField(source="seguradora.ativo", read_only=True)
+    seguradora_ativo = serializers.BooleanField(
+        source="seguradora.ativo", read_only=True
+    )
     apto = serializers.BooleanField(read_only=True)
     premio_minimo_efetivo = serializers.DecimalField(
         max_digits=14, decimal_places=2, read_only=True

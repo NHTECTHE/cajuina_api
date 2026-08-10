@@ -4,15 +4,26 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0002_customuser_cnpj_customuser_telefone_and_more'),
+        ("users", "0002_customuser_cnpj_customuser_telefone_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='customuser',
-            name='cargo',
-            field=models.CharField(choices=[('administrador', 'Administrador'), ('financeiro', 'Financeiro'), ('usuario', 'Usuário'), ('corretor', 'Corretor'), ('produtor', 'Produtor'), ('auto', 'Auto'), ('tomador', 'Tomador')], default='usuario', max_length=20),
+            model_name="customuser",
+            name="cargo",
+            field=models.CharField(
+                choices=[
+                    ("administrador", "Administrador"),
+                    ("financeiro", "Financeiro"),
+                    ("usuario", "Usuário"),
+                    ("corretor", "Corretor"),
+                    ("produtor", "Produtor"),
+                    ("auto", "Auto"),
+                    ("tomador", "Tomador"),
+                ],
+                default="usuario",
+                max_length=20,
+            ),
         ),
     ]

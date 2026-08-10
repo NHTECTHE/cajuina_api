@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('seguradoras', '0002_remove_seguradora_valor_execucao_and_more'),
+        ("seguradoras", "0002_remove_seguradora_valor_execucao_and_more"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='seguradora',
-            name='logo',
-            field=models.ImageField(blank=True, null=True, upload_to='seguradoras/logos/'),
+            model_name="seguradora",
+            name="logo",
+            field=models.ImageField(
+                blank=True, null=True, upload_to="seguradoras/logos/"
+            ),
         ),
     ]

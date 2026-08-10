@@ -2,5 +2,5 @@ from django.apps import AppConfig
 
 
 class CotacoesConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'apps.cotacoes'
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "apps.cotacoes"

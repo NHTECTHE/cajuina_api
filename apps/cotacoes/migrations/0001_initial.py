@@ -6,39 +6,83 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('modalidades', '0001_initial'),
-        ('segurados', '0001_initial'),
-        ('tomadores', '0002_tomadorarquivo'),
+        ("modalidades", "0001_initial"),
+        ("segurados", "0001_initial"),
+        ("tomadores", "0002_tomadorarquivo"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Cotacao',
+            name="Cotacao",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('edital', models.CharField(blank=True, default='', max_length=255)),
-                ('data_inicio', models.DateField(blank=True, null=True)),
-                ('prazo_dias', models.PositiveIntegerField(blank=True, null=True)),
-                ('data_final', models.DateField(blank=True, null=True)),
-                ('importancia_segurada', models.DecimalField(blank=True, decimal_places=2, max_digits=14, null=True)),
-                ('observacoes', models.TextField(blank=True, default='')),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('atualizado_em', models.DateTimeField(auto_now=True)),
-                ('criado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='cotacoes', to=settings.AUTH_USER_MODEL)),
-                ('modalidade', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='cotacoes', to='modalidades.modalidade')),
-                ('segurado', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='cotacoes', to='segurados.segurado')),
-                ('tomador', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='cotacoes', to='tomadores.tomador')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("edital", models.CharField(blank=True, default="", max_length=255)),
+                ("data_inicio", models.DateField(blank=True, null=True)),
+                ("prazo_dias", models.PositiveIntegerField(blank=True, null=True)),
+                ("data_final", models.DateField(blank=True, null=True)),
+                (
+                    "importancia_segurada",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=14, null=True
+                    ),
+                ),
+                ("observacoes", models.TextField(blank=True, default="")),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
+                (
+                    "criado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="cotacoes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "modalidade",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cotacoes",
+                        to="modalidades.modalidade",
+                    ),
+                ),
+                (
+                    "segurado",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cotacoes",
+                        to="segurados.segurado",
+                    ),
+                ),
+                (
+                    "tomador",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cotacoes",
+                        to="tomadores.tomador",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Cotação',
-                'verbose_name_plural': 'Cotações',
-                'db_table': 'cotacoes',
-                'ordering': ['-id'],
+                "verbose_name": "Cotação",
+                "verbose_name_plural": "Cotações",
+                "db_table": "cotacoes",
+                "ordering": ["-id"],
             },
         ),
     ]

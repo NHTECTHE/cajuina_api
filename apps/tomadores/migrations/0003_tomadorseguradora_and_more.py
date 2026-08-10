@@ -6,34 +6,83 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('seguradoras', '0004_seguradora_api_ou_name_seguradora_api_senha_and_more'),
-        ('tomadores', '0002_tomadorarquivo'),
+        ("seguradoras", "0004_seguradora_api_ou_name_seguradora_api_senha_and_more"),
+        ("tomadores", "0002_tomadorarquivo"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='TomadorSeguradora',
+            name="TomadorSeguradora",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('taxa', models.DecimalField(decimal_places=2, default=0, help_text='Zero deixa a seguradora fora das cotações deste tomador.', max_digits=5, validators=[django.core.validators.MinValueValidator(0)])),
-                ('premio_minimo', models.DecimalField(blank=True, decimal_places=2, help_text='Em branco usa o prêmio mínimo da seguradora.', max_digits=14, null=True, validators=[django.core.validators.MinValueValidator(0)])),
-                ('dias_vencimento', models.PositiveSmallIntegerField(blank=True, help_text='Em branco usa o dia de vencimento da seguradora.', null=True)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('atualizado_em', models.DateTimeField(auto_now=True)),
-                ('seguradora', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='tomadores', to='seguradoras.seguradora')),
-                ('tomador', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='seguradoras', to='tomadores.tomador')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "taxa",
+                    models.DecimalField(
+                        decimal_places=2,
+                        default=0,
+                        help_text="Zero deixa a seguradora fora das cotações deste tomador.",
+                        max_digits=5,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "premio_minimo",
+                    models.DecimalField(
+                        blank=True,
+                        decimal_places=2,
+                        help_text="Em branco usa o prêmio mínimo da seguradora.",
+                        max_digits=14,
+                        null=True,
+                        validators=[django.core.validators.MinValueValidator(0)],
+                    ),
+                ),
+                (
+                    "dias_vencimento",
+                    models.PositiveSmallIntegerField(
+                        blank=True,
+                        help_text="Em branco usa o dia de vencimento da seguradora.",
+                        null=True,
+                    ),
+                ),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                ("atualizado_em", models.DateTimeField(auto_now=True)),
+                (
+                    "seguradora",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="tomadores",
+                        to="seguradoras.seguradora",
+                    ),
+                ),
+                (
+                    "tomador",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="seguradoras",
+                        to="tomadores.tomador",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Seguradora do Tomador',
-                'verbose_name_plural': 'Seguradoras do Tomador',
-                'db_table': 'tomadores_seguradoras',
-                'ordering': ['seguradora__nome'],
+                "verbose_name": "Seguradora do Tomador",
+                "verbose_name_plural": "Seguradoras do Tomador",
+                "db_table": "tomadores_seguradoras",
+                "ordering": ["seguradora__nome"],
             },
         ),
         migrations.AddConstraint(
-            model_name='tomadorseguradora',
-            constraint=models.UniqueConstraint(fields=('tomador', 'seguradora'), name='uniq_tomador_seguradora'),
+            model_name="tomadorseguradora",
+            constraint=models.UniqueConstraint(
+                fields=("tomador", "seguradora"), name="uniq_tomador_seguradora"
+            ),
         ),
     ]
