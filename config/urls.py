@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
@@ -23,22 +24,26 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from apps.users.api.v1.views import CustomTokenObtainPairView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/v1/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/v1/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('api/v1/tomadores/', include('apps.tomadores.api.v1.urls')),
-    path('api/v1/users/', include('apps.users.api.v1.urls')),
-    path('api/v1/corretores/', include('apps.corretores.api.v1.urls')),
-    path('api/v1/segurados/', include('apps.segurados.api.v1.urls')),
-    path('api/v1/produtores/', include('apps.produtores.api.v1.urls')),
-    path('api/v1/seguradoras/', include('apps.seguradoras.api.v1.urls')),
-    path('api/v1/modalidades/', include('apps.modalidades.api.v1.urls')),
-    path('api/v1/cotacoes/', include('apps.cotacoes.api.v1.urls')),
-    path('api/v1/apolices/', include('apps.apolices.api.v1.urls')),
-    path('api/v1/alterar-senha/', include('apps.alterar_senha.api.v1.urls')),
-    path('api/v1/atividades/', include('apps.atividades.urls')),
-    path('api/v1/notificacoes/', include('apps.notificacoes.api.v1.urls')),
-    path('api/v1/dashboard/', include('apps.dashboard.api.v1.urls')),
+    path("admin/", admin.site.urls),
+    path(
+        "api/v1/auth/login/",
+        CustomTokenObtainPairView.as_view(),
+        name="token_obtain_pair",
+    ),
+    path("api/v1/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/v1/tomadores/", include("apps.tomadores.api.v1.urls")),
+    path("api/v1/users/", include("apps.users.api.v1.urls")),
+    path("api/v1/corretores/", include("apps.corretores.api.v1.urls")),
+    path("api/v1/segurados/", include("apps.segurados.api.v1.urls")),
+    path("api/v1/produtores/", include("apps.produtores.api.v1.urls")),
+    path("api/v1/seguradoras/", include("apps.seguradoras.api.v1.urls")),
+    path("api/v1/modalidades/", include("apps.modalidades.api.v1.urls")),
+    path("api/v1/cotacoes/", include("apps.cotacoes.api.v1.urls")),
+    path("api/v1/apolices/", include("apps.apolices.api.v1.urls")),
+    path("api/v1/alterar-senha/", include("apps.alterar_senha.api.v1.urls")),
+    path("api/v1/atividades/", include("apps.atividades.urls")),
+    path("api/v1/notificacoes/", include("apps.notificacoes.api.v1.urls")),
+    path("api/v1/dashboard/", include("apps.dashboard.api.v1.urls")),
 ]
 
 # ATENÇÃO: `static()` é no-op quando DEBUG=False (ver django/conf/urls/static.py),

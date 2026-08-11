@@ -4,6 +4,7 @@ Este app não tem models próprios: ele só cruza apolices, cotacoes, tomadores 
 seguradoras. Toda a lógica de recorte por período mora aqui para não se
 espalhar (e divergir) pelos apps de domínio.
 """
+
 import calendar
 from datetime import date
 from decimal import Decimal
@@ -69,12 +70,18 @@ def resumo(*, periodo: str, hoje: date | None = None) -> dict:
         "producao": producao,
         "apolices": apolices_periodo.count(),
         "tomadores": {
-            "periodo": Tomador.objects.filter(criado_em__date__range=(inicio, fim)).count(),
+            "periodo": Tomador.objects.filter(
+                criado_em__date__range=(inicio, fim)
+            ).count(),
             "total": Tomador.objects.count(),
         },
         "cotacoes": {
-            "iniciadas": cotacoes_periodo.filter(status=Cotacao.STATUS_INICIADO).count(),
-            "aprovadas": cotacoes_periodo.filter(status=Cotacao.STATUS_APROVADO).count(),
+            "iniciadas": cotacoes_periodo.filter(
+                status=Cotacao.STATUS_INICIADO
+            ).count(),
+            "aprovadas": cotacoes_periodo.filter(
+                status=Cotacao.STATUS_APROVADO
+            ).count(),
             "emitidas": cotacoes_periodo.filter(status=Cotacao.STATUS_EMITIDO).count(),
         },
         "periodo": {
@@ -147,13 +154,15 @@ def premio_por_seguradora(*, ano: int | None = None) -> list[dict]:
     for seguradora in seguradoras:
         meta = seguradora.meta
         falta = max(ZERO, meta - seguradora.valor_atual) if meta is not None else None
-        resultado.append({
-            "id": seguradora.id,
-            "seguradora": seguradora.nome,
-            "valor_atual": seguradora.valor_atual,
-            "meta": meta,
-            "falta": falta,
-        })
+        resultado.append(
+            {
+                "id": seguradora.id,
+                "seguradora": seguradora.nome,
+                "valor_atual": seguradora.valor_atual,
+                "meta": meta,
+                "falta": falta,
+            }
+        )
 
     return resultado
 
@@ -162,7 +171,9 @@ PAGE_SIZE_PADRAO = 10
 PAGE_SIZE_MAXIMO = 100
 
 
-def novos_cadastros(*, search: str = "", page: int = 1, page_size: int = PAGE_SIZE_PADRAO) -> dict:
+def novos_cadastros(
+    *, search: str = "", page: int = 1, page_size: int = PAGE_SIZE_PADRAO
+) -> dict:
     """Tomadores mais recentes, com busca e paginação no banco."""
     page = max(1, page)
     page_size = max(1, min(page_size, PAGE_SIZE_MAXIMO))
@@ -179,7 +190,7 @@ def novos_cadastros(*, search: str = "", page: int = 1, page_size: int = PAGE_SI
 
     count = qs.count()
     inicio = (page - 1) * page_size
-    pagina = qs[inicio:inicio + page_size]
+    pagina = qs[inicio : inicio + page_size]
 
     results = [
         {

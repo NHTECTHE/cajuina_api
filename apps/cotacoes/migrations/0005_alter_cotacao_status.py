@@ -4,15 +4,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('cotacoes', '0004_cotacao_premio_cotacao_seguradora'),
+        ("cotacoes", "0004_cotacao_premio_cotacao_seguradora"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='cotacao',
-            name='status',
-            field=models.CharField(choices=[('Iniciado', 'Iniciado'), ('Aprovado', 'Aprovado'), ('Emitido', 'Emitido')], default='Aprovado', max_length=20),
+            model_name="cotacao",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("Iniciado", "Iniciado"),
+                    ("Aprovado", "Aprovado"),
+                    ("Emitido", "Emitido"),
+                ],
+                default="Aprovado",
+                max_length=20,
+            ),
         ),
     ]

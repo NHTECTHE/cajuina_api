@@ -4,11 +4,11 @@ from django.db import migrations
 
 
 def backfill_status(apps, schema_editor):
-    TomadorSeguradora = apps.get_model('tomadores', 'TomadorSeguradora')
-    for vinculo in TomadorSeguradora.objects.filter(status='sem_cadastro'):
+    TomadorSeguradora = apps.get_model("tomadores", "TomadorSeguradora")
+    for vinculo in TomadorSeguradora.objects.filter(status="sem_cadastro"):
         if vinculo.taxa and Decimal(vinculo.taxa) > 0:
-            vinculo.status = 'cadastro_ok'
-            vinculo.save(update_fields=['status'])
+            vinculo.status = "cadastro_ok"
+            vinculo.save(update_fields=["status"])
 
 
 def noop(apps, schema_editor):
@@ -16,9 +16,8 @@ def noop(apps, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tomadores', '0004_tomadorseguradora_status'),
+        ("tomadores", "0004_tomadorseguradora_status"),
     ]
 
     operations = [

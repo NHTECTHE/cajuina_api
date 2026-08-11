@@ -3,7 +3,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = []
@@ -12,11 +11,34 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name="Seguradora",
             fields=[
-                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
                 ("nome", models.CharField(max_length=255)),
-                ("valor_licitacao", models.DecimalField(blank=True, decimal_places=2, max_digits=14, null=True)),
-                ("valor_execucao", models.DecimalField(blank=True, decimal_places=2, max_digits=14, null=True)),
-                ("taxa_comissao", models.DecimalField(blank=True, decimal_places=2, max_digits=5, null=True)),
+                (
+                    "valor_licitacao",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=14, null=True
+                    ),
+                ),
+                (
+                    "valor_execucao",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=14, null=True
+                    ),
+                ),
+                (
+                    "taxa_comissao",
+                    models.DecimalField(
+                        blank=True, decimal_places=2, max_digits=5, null=True
+                    ),
+                ),
                 (
                     "dia_vencimento",
                     models.PositiveSmallIntegerField(

@@ -4,15 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('corretores', '0001_initial'),
+        ("corretores", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='corretor',
-            name='recebimento',
-            field=models.CharField(blank=True, choices=[('lucro', 'Lucro'), ('comissao', 'Comissão'), ('premio', 'Prêmio')], default='', max_length=20),
+            model_name="corretor",
+            name="recebimento",
+            field=models.CharField(
+                blank=True,
+                choices=[
+                    ("lucro", "Lucro"),
+                    ("comissao", "Comissão"),
+                    ("premio", "Prêmio"),
+                ],
+                default="",
+                max_length=20,
+            ),
         ),
     ]

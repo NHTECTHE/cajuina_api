@@ -5,27 +5,44 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('tomadores', '0001_initial'),
+        ("tomadores", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='TomadorArquivo',
+            name="TomadorArquivo",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('arquivo', models.FileField(upload_to='tomadores/arquivos/%Y/%m/')),
-                ('nome_original', models.CharField(blank=True, default='', max_length=255)),
-                ('tamanho', models.PositiveIntegerField(default=0)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('tomador', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='arquivos', to='tomadores.tomador')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("arquivo", models.FileField(upload_to="tomadores/arquivos/%Y/%m/")),
+                (
+                    "nome_original",
+                    models.CharField(blank=True, default="", max_length=255),
+                ),
+                ("tamanho", models.PositiveIntegerField(default=0)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tomador",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="arquivos",
+                        to="tomadores.tomador",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Arquivo do Tomador',
-                'verbose_name_plural': 'Arquivos do Tomador',
-                'db_table': 'tomadores_arquivos',
-                'ordering': ['-criado_em'],
+                "verbose_name": "Arquivo do Tomador",
+                "verbose_name_plural": "Arquivos do Tomador",
+                "db_table": "tomadores_arquivos",
+                "ordering": ["-criado_em"],
             },
         ),
     ]

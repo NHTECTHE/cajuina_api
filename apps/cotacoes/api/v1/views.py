@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
@@ -56,7 +58,9 @@ class CotacaoDetailView(_CotacaoObjectMixin, APIView):
         cotacao = self._get_object(pk)
         serializer = CotacaoSerializer(cotacao, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        cotacao = services.cotacao_update(cotacao=cotacao, data=serializer.validated_data)
+        cotacao = services.cotacao_update(
+            cotacao=cotacao, data=serializer.validated_data
+        )
         out = CotacaoSerializer(cotacao)
         return Response(_envelope(out.data))
 
@@ -64,3 +68,34 @@ class CotacaoDetailView(_CotacaoObjectMixin, APIView):
         cotacao = self._get_object(pk)
         services.cotacao_delete(cotacao=cotacao)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CotacaoEnviarEmailView(_CotacaoObjectMixin, APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        self._get_object(pk)
+        assunto = request.data.get("assunto", "Cotação Aprovada")
+        mensagem = request.data.get("mensagem", "")
+        destinatario = request.data.get("destinatario", "")
+
+        if not destinatario or not mensagem:
+            return Response(
+                {"detail": "Destinatário e mensagem são obrigatórios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            send_mail(
+                subject=assunto,
+                message=mensagem,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario],
+                fail_silently=False,
+            )
+            return Response({"detail": "E-mail enviado com sucesso."})
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro ao enviar e-mail: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

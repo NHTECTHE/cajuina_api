@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -54,11 +56,11 @@ class ApoliceListView(APIView):
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
         tomador = request.query_params.get("tomador")
-        
+
         tomador_id = None
         if tomador and tomador.isdigit():
             tomador_id = int(tomador)
-            
+
         apolices = selectors.apolice_list(search=search, tomador_id=tomador_id)
         serializer = ApoliceSerializer(apolices, many=True)
         return Response(_envelope(serializer.data))
@@ -100,3 +102,38 @@ class ApoliceDetailView(APIView):
 
         services.apolice_delete(apolice=apolice)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ApoliceEnviarEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        try:
+            selectors.apolice_get(pk=pk)
+        except Apolice.DoesNotExist:
+            raise NotFound(detail="Apólice não encontrada.") from None
+
+        assunto = request.data.get("assunto", "Apólice Emitida")
+        mensagem = request.data.get("mensagem", "")
+        destinatario = request.data.get("destinatario", "")
+
+        if not destinatario or not mensagem:
+            return Response(
+                {"detail": "Destinatário e mensagem são obrigatórios."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            send_mail(
+                subject=assunto,
+                message=mensagem,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario],
+                fail_silently=False,
+            )
+            return Response({"detail": "E-mail enviado com sucesso."})
+        except Exception as e:
+            return Response(
+                {"detail": f"Erro ao enviar e-mail: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )

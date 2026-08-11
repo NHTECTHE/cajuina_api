@@ -4,15 +4,18 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('apolices', '0002_apolice_vencimento_boleto'),
+        ("apolices", "0002_apolice_vencimento_boleto"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='apolice',
-            name='status',
-            field=models.CharField(choices=[('Ativa', 'Ativa'), ('Cancelada', 'Cancelada')], default='Ativa', max_length=20),
+            model_name="apolice",
+            name="status",
+            field=models.CharField(
+                choices=[("Ativa", "Ativa"), ("Cancelada", "Cancelada")],
+                default="Ativa",
+                max_length=20,
+            ),
         ),
     ]

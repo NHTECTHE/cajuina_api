@@ -14,9 +14,12 @@ class NotificacaoListView(generics.ListAPIView):
     def get_queryset(self):
         return Notificacao.objects.filter(usuario=self.request.user)[:50]
 
+
 class NotificacaoMarcarLidasView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         Notificacao.objects.filter(usuario=request.user, lida=False).update(lida=True)
-        return Response({"detail": "Notificações marcadas como lidas."}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Notificações marcadas como lidas."}, status=status.HTTP_200_OK
+        )

@@ -8,13 +8,13 @@ class ModalidadeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Modalidade
         fields = (
-            'id',
-            'nome',
-            'ativo',
-            'criado_em',
-            'atualizado_em',
+            "id",
+            "nome",
+            "ativo",
+            "criado_em",
+            "atualizado_em",
         )
-        read_only_fields = ('id', 'criado_em', 'atualizado_em')
+        read_only_fields = ("id", "criado_em", "atualizado_em")
 
 
 class ModalidadeSeguradoraSerializer(serializers.ModelSerializer):
@@ -22,7 +22,9 @@ class ModalidadeSeguradoraSerializer(serializers.ModelSerializer):
 
     # Leitura: o que a tela de mapeamento precisa mostrar.
     seguradora_nome = serializers.CharField(source="seguradora.nome", read_only=True)
-    seguradora_ativo = serializers.BooleanField(source="seguradora.ativo", read_only=True)
+    seguradora_ativo = serializers.BooleanField(
+        source="seguradora.ativo", read_only=True
+    )
 
     class Meta:
         model = ModalidadeSeguradora

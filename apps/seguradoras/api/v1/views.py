@@ -23,11 +23,15 @@ class SeguradoraListCreateView(APIView):
         search = request.query_params.get("search", "")
         ativo = request.query_params.get("ativo", "")
         seguradoras = selectors.seguradora_list(search=search, ativo=ativo)
-        serializer = SeguradoraSerializer(seguradoras, many=True, context={"request": request})
+        serializer = SeguradoraSerializer(
+            seguradoras, many=True, context={"request": request}
+        )
         return Response(_envelope(serializer.data))
 
     def post(self, request: Request) -> Response:
-        serializer = SeguradoraSerializer(data=request.data, context={"request": request})
+        serializer = SeguradoraSerializer(
+            data=request.data, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
         seguradora = services.seguradora_create(data=serializer.validated_data)
         out = SeguradoraSerializer(seguradora, context={"request": request})
@@ -43,6 +47,7 @@ class SeguradoraDetailView(APIView):
             return selectors.seguradora_get(pk=pk)
         except Seguradora.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Seguradora não encontrada.") from None
 
     def get(self, request: Request, pk: int) -> Response:
@@ -52,9 +57,13 @@ class SeguradoraDetailView(APIView):
 
     def patch(self, request: Request, pk: int) -> Response:
         seguradora = self._get_object(pk)
-        serializer = SeguradoraSerializer(seguradora, data=request.data, partial=True, context={"request": request})
+        serializer = SeguradoraSerializer(
+            seguradora, data=request.data, partial=True, context={"request": request}
+        )
         serializer.is_valid(raise_exception=True)
-        seguradora = services.seguradora_update(seguradora=seguradora, data=serializer.validated_data)
+        seguradora = services.seguradora_update(
+            seguradora=seguradora, data=serializer.validated_data
+        )
         out = SeguradoraSerializer(seguradora, context={"request": request})
         return Response(_envelope(out.data))
 

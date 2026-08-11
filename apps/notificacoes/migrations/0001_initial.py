@@ -6,7 +6,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -15,21 +14,39 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='Notificacao',
+            name="Notificacao",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('titulo', models.CharField(max_length=255)),
-                ('mensagem', models.TextField()),
-                ('status_badge', models.CharField(blank=True, max_length=50, null=True)),
-                ('lida', models.BooleanField(default=False)),
-                ('criado_em', models.DateTimeField(auto_now_add=True)),
-                ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='notificacoes', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("titulo", models.CharField(max_length=255)),
+                ("mensagem", models.TextField()),
+                (
+                    "status_badge",
+                    models.CharField(blank=True, max_length=50, null=True),
+                ),
+                ("lida", models.BooleanField(default=False)),
+                ("criado_em", models.DateTimeField(auto_now_add=True)),
+                (
+                    "usuario",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="notificacoes",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Notificação',
-                'verbose_name_plural': 'Notificações',
-                'db_table': 'notificacoes',
-                'ordering': ['-criado_em'],
+                "verbose_name": "Notificação",
+                "verbose_name_plural": "Notificações",
+                "db_table": "notificacoes",
+                "ordering": ["-criado_em"],
             },
         ),
     ]

@@ -42,9 +42,9 @@ def tomador_arquivo_get(*, tomador_id: int, pk: int) -> TomadorArquivo:
 
 
 def tomador_seguradora_list(*, tomador_id: int) -> QuerySet[TomadorSeguradora]:
-    return TomadorSeguradora.objects.filter(
-        tomador_id=tomador_id
-    ).select_related("seguradora")
+    return TomadorSeguradora.objects.filter(tomador_id=tomador_id).select_related(
+        "seguradora"
+    )
 
 
 def tomador_seguradora_get(*, tomador_id: int, seguradora_id: int) -> TomadorSeguradora:

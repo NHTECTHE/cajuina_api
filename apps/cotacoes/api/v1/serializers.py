@@ -22,9 +22,15 @@ class CotacaoSerializer(serializers.ModelSerializer):
     tomador_nome = serializers.CharField(source="tomador.nome", read_only=True)
     tomador_cnpj = serializers.CharField(source="tomador.cnpj", read_only=True)
     modalidade_nome = serializers.CharField(source="modalidade.nome", read_only=True)
-    segurado_nome = serializers.CharField(source="segurado.nome", read_only=True, default=None)
-    segurado_cnpj = serializers.CharField(source="segurado.cnpj", read_only=True, default=None)
-    seguradora_nome = serializers.CharField(source="seguradora.nome", read_only=True, default=None)
+    segurado_nome = serializers.CharField(
+        source="segurado.nome", read_only=True, default=None
+    )
+    segurado_cnpj = serializers.CharField(
+        source="segurado.cnpj", read_only=True, default=None
+    )
+    seguradora_nome = serializers.CharField(
+        source="seguradora.nome", read_only=True, default=None
+    )
     criado_por_nome = serializers.SerializerMethodField()
 
     class Meta:

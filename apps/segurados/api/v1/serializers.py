@@ -4,13 +4,17 @@ from apps.segurados.models import Segurado
 
 
 class SeguradoSerializer(serializers.ModelSerializer):
-    observacoes = serializers.CharField(allow_blank=True, allow_null=True, required=False, default="")
+    observacoes = serializers.CharField(
+        allow_blank=True, allow_null=True, required=False, default=""
+    )
 
     def validate_observacoes(self, value):
         if value is None:
             return ""
         if len(value) > 500:
-            raise serializers.ValidationError("Observações não podem exceder 500 caracteres.")
+            raise serializers.ValidationError(
+                "Observações não podem exceder 500 caracteres."
+            )
         return value
 
     class Meta:

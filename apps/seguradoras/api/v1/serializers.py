@@ -8,12 +8,16 @@ from apps.seguradoras.models import Seguradora
 class SeguradoraSerializer(serializers.ModelSerializer):
     def validate_taxa_comissao(self, value):
         if value is not None and not (Decimal("0") <= value <= Decimal("100")):
-            raise serializers.ValidationError("Taxa de comissão deve estar entre 0 e 100.")
+            raise serializers.ValidationError(
+                "Taxa de comissão deve estar entre 0 e 100."
+            )
         return value
 
     def validate_vencimento_dias(self, value):
         if value is not None and not (1 <= value <= 30):
-            raise serializers.ValidationError("Vencimento deve estar entre 1 e 30 dias.")
+            raise serializers.ValidationError(
+                "Vencimento deve estar entre 1 e 30 dias."
+            )
         return value
 
     def validate_meta(self, value):

@@ -6,16 +6,22 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('tomadores', '0005_backfill_tomadorseguradora_status'),
+        ("tomadores", "0005_backfill_tomadorseguradora_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='tomador',
-            name='criado_por',
-            field=models.ForeignKey(blank=True, help_text='Usuário que cadastrou o tomador. Nulo para registros anteriores ao campo.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='tomadores_criados', to=settings.AUTH_USER_MODEL),
+            model_name="tomador",
+            name="criado_por",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Usuário que cadastrou o tomador. Nulo para registros anteriores ao campo.",
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                related_name="tomadores_criados",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]
