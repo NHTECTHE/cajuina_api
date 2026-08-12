@@ -8,6 +8,7 @@ from django.db import transaction
 from apps.cotacoes.models import Cotacao
 from apps.notificacoes.models import Notificacao
 from apps.tomadores.models import TomadorSeguradora
+from shared.utils import formatar_brl, formatar_data
 
 from .models import Apolice
 
@@ -84,3 +85,39 @@ def apolice_delete(*, apolice: Apolice) -> None:
     cotacao.status = Cotacao.STATUS_APROVADO
     cotacao.save(update_fields=["status", "atualizado_em"])
     apolice.delete()
+
+
+def apolice_montar_email(*, apolice: Apolice, observacao: str = "") -> dict[str, str]:
+    """Assunto, destinatário e corpo do e-mail de apólice emitida.
+
+    Mesma regra de `cotacao_montar_email`: o conteúdo sai do objeto, e o cliente
+    só pode acrescentar uma observação identificada.
+    """
+    cotacao = apolice.cotacao
+    tomador = cotacao.tomador
+    segurado = cotacao.segurado.nome if cotacao.segurado_id else tomador.nome
+
+    corpo = f"""Prezado(a),
+
+Sua apólice foi emitida com sucesso.
+
+Detalhes:
+- Apólice: {apolice.numero_apolice}
+- Segurado: {segurado}
+- Seguradora: {apolice.seguradora.nome}
+- Prêmio: {formatar_brl(apolice.valor_seguradora)}
+- Vencimento do boleto: {formatar_data(apolice.vencimento_boleto)}"""
+
+    if observacao:
+        corpo += f"\n\n**Observações**\n\n{observacao}"
+
+    corpo += """
+
+Atenciosamente,
+Equipe Cajuína Seguros."""
+
+    return {
+        "assunto": "Apólice Emitida",
+        "destinatario": tomador.email,
+        "mensagem": corpo,
+    }

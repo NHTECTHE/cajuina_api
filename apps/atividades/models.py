@@ -8,6 +8,7 @@ class Atividade(models.Model):
         ("CRIAÇÃO", "Criação"),
         ("ATUALIZAÇÃO", "Atualização"),
         ("EXCLUSÃO", "Exclusão"),
+        ("ENVIO", "Envio"),
     ]
 
     usuario = models.ForeignKey(

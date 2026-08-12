@@ -163,6 +163,13 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+    # Teto por usuário no disparo de e-mail ao cliente. Não é o controle
+    # principal (esse é a permissão por cargo), e sim o limite de estrago caso
+    # uma conta habilitada seja comprometida: envio em volume queima a
+    # reputação do domínio e derruba a entrega dos e-mails legítimos.
+    "DEFAULT_THROTTLE_RATES": {
+        "envio-email": "30/hour",
+    },
 }
 
 from datetime import timedelta

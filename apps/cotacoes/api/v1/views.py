@@ -1,14 +1,17 @@
-from django.conf import settings
-from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from apps.atividades.services import atividade_create
 from apps.cotacoes import selectors, services
 from apps.cotacoes.models import Cotacao
+from shared.emails import EnvioEmailError, enviar_email
+from shared.permissions import PodeEnviarComunicacao
+from shared.serializers import EnvioEmailSerializer
 
 from .serializers import CotacaoSerializer
 
@@ -70,32 +73,56 @@ class CotacaoDetailView(_CotacaoObjectMixin, APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CotacaoEmailPreviewView(_CotacaoObjectMixin, APIView):
+    """Mostra exatamente o que será enviado, montado pelo servidor."""
+
+    permission_classes = [IsAuthenticated, PodeEnviarComunicacao]
+
+    def get(self, request: Request, pk: int) -> Response:
+        cotacao = self._get_object(pk)
+        serializer = EnvioEmailSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        email = services.cotacao_montar_email(
+            cotacao=cotacao,
+            observacao=serializer.validated_data.get("observacao", ""),
+        )
+        return Response(_envelope(email))
+
+
 class CotacaoEnviarEmailView(_CotacaoObjectMixin, APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, PodeEnviarComunicacao]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "envio-email"
 
     def post(self, request: Request, pk: int) -> Response:
-        self._get_object(pk)
-        assunto = request.data.get("assunto", "Cotação Aprovada")
-        mensagem = request.data.get("mensagem", "")
-        destinatario = request.data.get("destinatario", "")
+        cotacao = self._get_object(pk)
+        serializer = EnvioEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-        if not destinatario or not mensagem:
+        email = services.cotacao_montar_email(
+            cotacao=cotacao,
+            observacao=serializer.validated_data.get("observacao", ""),
+        )
+        if not email["destinatario"]:
             return Response(
-                {"detail": "Destinatário e mensagem são obrigatórios."},
+                {"detail": "O tomador desta cotação não tem e-mail cadastrado."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            send_mail(
-                subject=assunto,
-                message=mensagem,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[destinatario],
-                fail_silently=False,
-            )
-            return Response({"detail": "E-mail enviado com sucesso."})
-        except Exception as e:
+            enviar_email(**email)
+        except EnvioEmailError:
             return Response(
-                {"detail": f"Erro ao enviar e-mail: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                {"detail": "Não foi possível enviar o e-mail. Tente novamente."},
+                status=status.HTTP_502_BAD_GATEWAY,
             )
+
+        atividade_create(
+            usuario=request.user,
+            acao="ENVIO",
+            entidade="Cotação",
+            object_id=cotacao.pk,
+            item=cotacao.tomador.nome,
+            detalhes=f"E-mail de cotação enviado para {email['destinatario']}.",
+        )
+        return Response({"detail": "E-mail enviado com sucesso."})
