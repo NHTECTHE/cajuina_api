@@ -40,6 +40,7 @@ class ProdutorDetailView(APIView):
             return selectors.produtor_get(pk=pk)
         except Produtor.DoesNotExist:
             from rest_framework.exceptions import NotFound
+
             raise NotFound(detail="Produtor não encontrado.") from None
 
     def get(self, request: Request, pk: int) -> Response:
@@ -51,7 +52,9 @@ class ProdutorDetailView(APIView):
         produtor = self._get_object(pk)
         serializer = ProdutorSerializer(produtor, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        produtor = services.produtor_update(produtor=produtor, data=serializer.validated_data)
+        produtor = services.produtor_update(
+            produtor=produtor, data=serializer.validated_data
+        )
         out = ProdutorSerializer(produtor)
         return Response(_envelope(out.data))
 

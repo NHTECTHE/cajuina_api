@@ -4,34 +4,51 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('apolices', '0003_apolice_status'),
+        ("apolices", "0003_apolice_status"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='apolice',
-            name='status',
+            model_name="apolice",
+            name="status",
         ),
         migrations.AddField(
-            model_name='apolice',
-            name='arquivo_proposta',
-            field=models.FileField(blank=True, null=True, upload_to='apolices/propostas/%Y/%m/'),
+            model_name="apolice",
+            name="arquivo_proposta",
+            field=models.FileField(
+                blank=True, null=True, upload_to="apolices/propostas/%Y/%m/"
+            ),
         ),
         migrations.AddField(
-            model_name='apolice',
-            name='observacoes',
-            field=models.TextField(blank=True, default=''),
+            model_name="apolice",
+            name="observacoes",
+            field=models.TextField(blank=True, default=""),
         ),
         migrations.AddField(
-            model_name='apolice',
-            name='status_pagamento_comissao',
-            field=models.CharField(choices=[('A Receber', 'A Receber'), ('Recebido', 'Recebido'), ('Atrasado', 'Atrasado')], default='A Receber', max_length=20),
+            model_name="apolice",
+            name="status_pagamento_comissao",
+            field=models.CharField(
+                choices=[
+                    ("A Receber", "A Receber"),
+                    ("Recebido", "Recebido"),
+                    ("Atrasado", "Atrasado"),
+                ],
+                default="A Receber",
+                max_length=20,
+            ),
         ),
         migrations.AddField(
-            model_name='apolice',
-            name='status_pagamento_premio',
-            field=models.CharField(choices=[('Pendente', 'Pendente'), ('Pago', 'Pago'), ('Atrasado', 'Atrasado')], default='Pendente', max_length=20),
+            model_name="apolice",
+            name="status_pagamento_premio",
+            field=models.CharField(
+                choices=[
+                    ("Pendente", "Pendente"),
+                    ("Pago", "Pago"),
+                    ("Atrasado", "Atrasado"),
+                ],
+                default="Pendente",
+                max_length=20,
+            ),
         ),
     ]

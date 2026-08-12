@@ -61,26 +61,39 @@ class TestPeriodoRange:
 def cenario(db):
     """Uma seguradora, uma modalidade, dois tomadores e três cotações."""
     seguradora = Seguradora.objects.create(
-        nome="AVLA", premio_minimo=Decimal("100.00"), taxa_comissao=Decimal("10.00"),
+        nome="AVLA",
+        premio_minimo=Decimal("100.00"),
+        taxa_comissao=Decimal("10.00"),
         meta=Decimal("10000.00"),
     )
     modalidade = Modalidade.objects.create(nome="Garantia")
     tomador = Tomador.objects.create(cnpj="11.111.111/0001-11", nome="ACME")
 
     iniciada = Cotacao.objects.create(
-        status=Cotacao.STATUS_INICIADO, tomador=tomador, modalidade=modalidade,
-        seguradora=seguradora, premio=Decimal("500.00"),
+        status=Cotacao.STATUS_INICIADO,
+        tomador=tomador,
+        modalidade=modalidade,
+        seguradora=seguradora,
+        premio=Decimal("500.00"),
     )
     aprovada = Cotacao.objects.create(
-        status=Cotacao.STATUS_APROVADO, tomador=tomador, modalidade=modalidade,
-        seguradora=seguradora, premio=Decimal("300.00"),
+        status=Cotacao.STATUS_APROVADO,
+        tomador=tomador,
+        modalidade=modalidade,
+        seguradora=seguradora,
+        premio=Decimal("300.00"),
     )
     emitida = Cotacao.objects.create(
-        status=Cotacao.STATUS_EMITIDO, tomador=tomador, modalidade=modalidade,
-        seguradora=seguradora, premio=Decimal("1000.00"),
+        status=Cotacao.STATUS_EMITIDO,
+        tomador=tomador,
+        modalidade=modalidade,
+        seguradora=seguradora,
+        premio=Decimal("1000.00"),
     )
     apolice = Apolice.objects.create(
-        cotacao=emitida, seguradora=seguradora, numero_apolice="AP-1",
+        cotacao=emitida,
+        seguradora=seguradora,
+        numero_apolice="AP-1",
         valor_seguradora=Decimal("900.00"),
     )
 
@@ -263,11 +276,16 @@ class TestPremioPorSeguradora:
             nome="ZURICH", premio_minimo=Decimal("100.00"), meta=Decimal("1000.00")
         )
         cotacao = Cotacao.objects.create(
-            status=Cotacao.STATUS_EMITIDO, tomador=cenario["tomador"],
-            modalidade=cenario["modalidade"], seguradora=outra, premio=Decimal("5000.00"),
+            status=Cotacao.STATUS_EMITIDO,
+            tomador=cenario["tomador"],
+            modalidade=cenario["modalidade"],
+            seguradora=outra,
+            premio=Decimal("5000.00"),
         )
         Apolice.objects.create(
-            cotacao=cotacao, seguradora=outra, numero_apolice="AP-Z",
+            cotacao=cotacao,
+            seguradora=outra,
+            numero_apolice="AP-Z",
             valor_seguradora=Decimal("5000.00"),
         )
         ano = timezone.localdate().year

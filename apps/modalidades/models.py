@@ -81,4 +81,6 @@ class ModalidadeSeguradora(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.modalidade.nome} — {self.seguradora.nome}: {self.codigo_seguradora}"
+        return (
+            f"{self.modalidade.nome} — {self.seguradora.nome}: {self.codigo_seguradora}"
+        )

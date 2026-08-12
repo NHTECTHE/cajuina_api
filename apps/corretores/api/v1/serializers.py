@@ -1,11 +1,9 @@
-
 from rest_framework import serializers
 
 from apps.corretores.models import Corretor
 
 
 class CorretorSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Corretor
         fields = [

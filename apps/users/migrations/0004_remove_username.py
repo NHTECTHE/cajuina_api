@@ -41,21 +41,20 @@ def reverter_verificacao(apps_registry, schema_editor):
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('users', '0003_customuser_cargo'),
+        ("users", "0003_customuser_cargo"),
     ]
 
     operations = [
         migrations.RunPython(verificar_emails, reverter_verificacao),
         migrations.RemoveField(
-            model_name='customuser',
-            name='username',
+            model_name="customuser",
+            name="username",
         ),
         migrations.AlterModelManagers(
-            name='customuser',
+            name="customuser",
             managers=[
-                ('objects', apps.users.managers.CustomUserManager()),
+                ("objects", apps.users.managers.CustomUserManager()),
             ],
         ),
     ]

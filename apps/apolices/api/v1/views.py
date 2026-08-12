@@ -5,12 +5,17 @@ from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.apolices import selectors, services
 from apps.apolices.models import Apolice
+from apps.atividades.services import atividade_create
 from apps.cotacoes import selectors as cotacoes_selectors
 from apps.cotacoes.models import Cotacao
+from shared.emails import EnvioEmailError, enviar_email
+from shared.permissions import PodeEnviarComunicacao
+from shared.serializers import EnvioEmailSerializer
 
 from .serializers import ApoliceSerializer
 
@@ -54,11 +59,11 @@ class ApoliceListView(APIView):
     def get(self, request: Request) -> Response:
         search = request.query_params.get("search", "")
         tomador = request.query_params.get("tomador")
-        
+
         tomador_id = None
         if tomador and tomador.isdigit():
             tomador_id = int(tomador)
-            
+
         apolices = selectors.apolice_list(search=search, tomador_id=tomador_id)
         serializer = ApoliceSerializer(apolices, many=True)
         return Response(_envelope(serializer.data))
@@ -100,3 +105,66 @@ class ApoliceDetailView(APIView):
 
         services.apolice_delete(apolice=apolice)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class _ApoliceObjectMixin:
+    def _get_object(self, pk: int) -> Apolice:
+        try:
+            return selectors.apolice_get(pk=pk)
+        except Apolice.DoesNotExist:
+            raise NotFound(detail="Apólice não encontrada.") from None
+
+
+class ApoliceEmailPreviewView(_ApoliceObjectMixin, APIView):
+    """Mostra exatamente o que será enviado, montado pelo servidor."""
+
+    permission_classes = [IsAuthenticated, PodeEnviarComunicacao]
+
+    def get(self, request: Request, pk: int) -> Response:
+        apolice = self._get_object(pk)
+        serializer = EnvioEmailSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        email = services.apolice_montar_email(
+            apolice=apolice,
+            observacao=serializer.validated_data.get("observacao", ""),
+        )
+        return Response(_envelope(email))
+
+
+class ApoliceEnviarEmailView(_ApoliceObjectMixin, APIView):
+    permission_classes = [IsAuthenticated, PodeEnviarComunicacao]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "envio-email"
+
+    def post(self, request: Request, pk: int) -> Response:
+        apolice = self._get_object(pk)
+        serializer = EnvioEmailSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = services.apolice_montar_email(
+            apolice=apolice,
+            observacao=serializer.validated_data.get("observacao", ""),
+        )
+        if not email["destinatario"]:
+            return Response(
+                {"detail": "O tomador desta apólice não tem e-mail cadastrado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            enviar_email(**email)
+        except EnvioEmailError:
+            return Response(
+                {"detail": "Não foi possível enviar o e-mail. Tente novamente."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        atividade_create(
+            usuario=request.user,
+            acao="ENVIO",
+            entidade="Apólice",
+            object_id=apolice.pk,
+            item=apolice.numero_apolice,
+            detalhes=f"E-mail de apólice enviado para {email['destinatario']}.",
+        )
+        return Response({"detail": "E-mail enviado com sucesso."})

@@ -7,7 +7,9 @@ class Seguradora(models.Model):
     logo = models.ImageField(upload_to="seguradoras/logos/", null=True, blank=True)
     meta = models.DecimalField(max_digits=14, decimal_places=2, null=True, blank=True)
     premio_minimo = models.DecimalField(max_digits=14, decimal_places=2)
-    taxa_comissao = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    taxa_comissao = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
     vencimento_dias = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
@@ -18,8 +20,12 @@ class Seguradora(models.Model):
     # Credenciais de integração com a API externa da seguradora
     api_usuario = models.CharField(max_length=255, blank=True, default="")
     api_senha = models.CharField(max_length=255, blank=True, default="")
-    api_ou_name = models.CharField(max_length=255, blank=True, default="", verbose_name="OUName")
-    api_source_app = models.CharField(max_length=255, blank=True, default="", verbose_name="SourceApp")
+    api_ou_name = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="OUName"
+    )
+    api_source_app = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="SourceApp"
+    )
 
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

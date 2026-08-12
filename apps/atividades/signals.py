@@ -4,27 +4,39 @@ from django.dispatch import receiver
 from apps.atividades.middleware import get_current_user
 from apps.atividades.services import atividade_create
 
-TRACKED_MODELS = ['CustomUser', 'Tomador', 'Corretor', 'Segurado', 'Produtor', 'Seguradora', 'Modalidade', 'TomadorSeguradora']
+TRACKED_MODELS = [
+    "CustomUser",
+    "Tomador",
+    "Corretor",
+    "Segurado",
+    "Produtor",
+    "Seguradora",
+    "Modalidade",
+    "TomadorSeguradora",
+]
+
 
 def get_entity_name(model_name):
     mapping = {
-        'CustomUser': 'Usuário',
-        'Tomador': 'Tomador',
-        'Corretor': 'Corretor',
-        'Segurado': 'Segurado',
-        'Produtor': 'Produtor',
-        'Seguradora': 'Seguradora',
-        'Modalidade': 'Modalidade',
-        'TomadorSeguradora': 'TomadorSeguradora',
+        "CustomUser": "Usuário",
+        "Tomador": "Tomador",
+        "Corretor": "Corretor",
+        "Segurado": "Segurado",
+        "Produtor": "Produtor",
+        "Seguradora": "Seguradora",
+        "Modalidade": "Modalidade",
+        "TomadorSeguradora": "TomadorSeguradora",
     }
     return mapping.get(model_name, model_name)
 
+
 def get_item_description(instance):
-    if hasattr(instance, 'nome') and instance.nome:
+    if hasattr(instance, "nome") and instance.nome:
         return instance.nome
-    if hasattr(instance, 'first_name') and instance.first_name:
+    if hasattr(instance, "first_name") and instance.first_name:
         return instance.first_name
     return str(instance)
+
 
 def get_changed_fields(instance):
     if not instance.pk:
@@ -34,7 +46,7 @@ def get_changed_fields(instance):
         changed = []
         for field in instance._meta.fields:
             field_name = field.name
-            if field_name in ['criado_em', 'atualizado_em']:
+            if field_name in ["criado_em", "atualizado_em"]:
                 continue
             if getattr(instance, field_name) != getattr(old_instance, field_name):
                 changed.append(field_name)
@@ -42,12 +54,14 @@ def get_changed_fields(instance):
     except Exception:
         return []
 
+
 @receiver(pre_save)
 def track_changes(sender, instance, **kwargs):
     model_name = sender.__name__
     if model_name not in TRACKED_MODELS:
         return
     instance._changed_fields = get_changed_fields(instance)
+
 
 @receiver(post_save)
 def log_save(sender, instance, created, **kwargs):
@@ -64,16 +78,18 @@ def log_save(sender, instance, created, **kwargs):
 
     detalhes = ""
     if not created:
-        changed_fields = getattr(instance, '_changed_fields', [])
+        changed_fields = getattr(instance, "_changed_fields", [])
         if changed_fields:
-            filtered_fields = [f for f in changed_fields if f not in ['password', 'last_login']]
+            filtered_fields = [
+                f for f in changed_fields if f not in ["password", "last_login"]
+            ]
             if filtered_fields:
                 detalhes = f"Campos alterados: {', '.join(filtered_fields)}"
             else:
-                if 'password' in changed_fields:
+                if "password" in changed_fields:
                     detalhes = "Campos alterados: password"
                 else:
-                    return # Skip if it was just last_login/etc.
+                    return  # Skip if it was just last_login/etc.
         else:
             detalhes = "Campos alterados: atualizado_em"
 
@@ -83,8 +99,9 @@ def log_save(sender, instance, created, **kwargs):
         entidade=entidade,
         object_id=instance.pk,
         item=item,
-        detalhes=detalhes
+        detalhes=detalhes,
     )
+
 
 @receiver(post_delete)
 def log_delete(sender, instance, **kwargs):
@@ -102,5 +119,5 @@ def log_delete(sender, instance, **kwargs):
         entidade=entidade,
         object_id=instance.pk,
         item=item,
-        detalhes=""
+        detalhes="",
     )

@@ -18,8 +18,12 @@ class Produtor(models.Model):
     )
     email = models.EmailField(blank=True, default="")
     telefone = models.CharField(max_length=20, blank=True, default="")
-    recebimento = models.CharField(max_length=20, choices=RECEBIMENTO_CHOICES, blank=True, default="")
-    percentual = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    recebimento = models.CharField(
+        max_length=20, choices=RECEBIMENTO_CHOICES, blank=True, default=""
+    )
+    percentual = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
     meta = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
     ativo = models.BooleanField(default=True)
 

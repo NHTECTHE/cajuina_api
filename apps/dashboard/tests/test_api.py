@@ -36,20 +36,31 @@ def auth_client(usuario):
 @pytest.fixture
 def dados(db, usuario):
     seguradora = Seguradora.objects.create(
-        nome="AVLA", premio_minimo=Decimal("100.00"),
-        taxa_comissao=Decimal("10.00"), meta=Decimal("10000.00"),
+        nome="AVLA",
+        premio_minimo=Decimal("100.00"),
+        taxa_comissao=Decimal("10.00"),
+        meta=Decimal("10000.00"),
     )
     modalidade = Modalidade.objects.create(nome="Garantia")
     tomador = Tomador.objects.create(
-        cnpj="11.111.111/0001-11", nome="ACME", contato="João",
-        telefone="(85) 98888-0000", email="acme@teste.com", criado_por=usuario,
+        cnpj="11.111.111/0001-11",
+        nome="ACME",
+        contato="João",
+        telefone="(85) 98888-0000",
+        email="acme@teste.com",
+        criado_por=usuario,
     )
     cotacao = Cotacao.objects.create(
-        status=Cotacao.STATUS_EMITIDO, tomador=tomador, modalidade=modalidade,
-        seguradora=seguradora, premio=Decimal("1000.00"),
+        status=Cotacao.STATUS_EMITIDO,
+        tomador=tomador,
+        modalidade=modalidade,
+        seguradora=seguradora,
+        premio=Decimal("1000.00"),
     )
     Apolice.objects.create(
-        cotacao=cotacao, seguradora=seguradora, numero_apolice="AP-1",
+        cotacao=cotacao,
+        seguradora=seguradora,
+        numero_apolice="AP-1",
         valor_seguradora=Decimal("900.00"),
     )
     return {"seguradora": seguradora, "tomador": tomador}
@@ -67,7 +78,13 @@ class TestResumoEndpoint:
 
         assert resp.status_code == 200
         data = resp.data["data"]
-        assert set(data.keys()) == {"producao", "apolices", "tomadores", "cotacoes", "periodo"}
+        assert set(data.keys()) == {
+            "producao",
+            "apolices",
+            "tomadores",
+            "cotacoes",
+            "periodo",
+        }
         assert set(data["tomadores"].keys()) == {"periodo", "total"}
         assert set(data["cotacoes"].keys()) == {"iniciadas", "aprovadas", "emitidas"}
         assert set(data["periodo"].keys()) == {"tipo", "inicio", "fim", "rotulo"}
@@ -100,7 +117,12 @@ class TestComissoesEndpoint:
         resp = auth_client.get(reverse("dashboard-comissoes"))
 
         assert resp.status_code == 200
-        assert set(resp.data["data"].keys()) == {"a_receber", "pago", "em_atraso", "a_pagar"}
+        assert set(resp.data["data"].keys()) == {
+            "a_receber",
+            "pago",
+            "em_atraso",
+            "a_pagar",
+        }
 
 
 @pytest.mark.django_db

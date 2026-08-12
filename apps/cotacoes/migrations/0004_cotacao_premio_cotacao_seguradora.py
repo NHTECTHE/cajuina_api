@@ -5,21 +5,33 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('seguradoras', '0005_rename_vencimento_dias'),
-        ('cotacoes', '0003_alter_cotacao_status'),
+        ("seguradoras", "0005_rename_vencimento_dias"),
+        ("cotacoes", "0003_alter_cotacao_status"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='cotacao',
-            name='premio',
-            field=models.DecimalField(blank=True, decimal_places=2, help_text='Prêmio calculado a partir da taxa do tomador na seguradora escolhida.', max_digits=14, null=True),
+            model_name="cotacao",
+            name="premio",
+            field=models.DecimalField(
+                blank=True,
+                decimal_places=2,
+                help_text="Prêmio calculado a partir da taxa do tomador na seguradora escolhida.",
+                max_digits=14,
+                null=True,
+            ),
         ),
         migrations.AddField(
-            model_name='cotacao',
-            name='seguradora',
-            field=models.ForeignKey(blank=True, help_text='Seguradora escolhida para esta cotação.', null=True, on_delete=django.db.models.deletion.PROTECT, related_name='cotacoes', to='seguradoras.seguradora'),
+            model_name="cotacao",
+            name="seguradora",
+            field=models.ForeignKey(
+                blank=True,
+                help_text="Seguradora escolhida para esta cotação.",
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="cotacoes",
+                to="seguradoras.seguradora",
+            ),
         ),
     ]

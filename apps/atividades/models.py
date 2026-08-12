@@ -4,10 +4,11 @@ from django.db import models
 
 class Atividade(models.Model):
     ACAO_CHOICES = [
-        ('LOGIN', 'Login'),
-        ('CRIAÇÃO', 'Criação'),
-        ('ATUALIZAÇÃO', 'Atualização'),
-        ('EXCLUSÃO', 'Exclusão'),
+        ("LOGIN", "Login"),
+        ("CRIAÇÃO", "Criação"),
+        ("ATUALIZAÇÃO", "Atualização"),
+        ("EXCLUSÃO", "Exclusão"),
+        ("ENVIO", "Envio"),
     ]
 
     usuario = models.ForeignKey(
@@ -15,7 +16,7 @@ class Atividade(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='atividades'
+        related_name="atividades",
     )
     usuario_nome = models.CharField(max_length=255, blank=True, default="")
     acao = models.CharField(max_length=20, choices=ACAO_CHOICES)
