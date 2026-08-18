@@ -11,6 +11,8 @@ dependencies = [
     "django-cors-headers",
     "gunicorn",
     "pillow",
+    # Cliente HTTP das integrações com seguradoras (apps/emissoes).
+    "httpx",
 ]
 
 [tool.uv]

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -7,7 +9,9 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from apps.atividades.models import Atividade
+from apps.cotacoes import services
 from apps.cotacoes.models import Cotacao
+from apps.emissoes.models import EmissaoSeguradora
 from apps.modalidades.models import Modalidade
 from apps.seguradoras.models import Seguradora
 from apps.tomadores.models import Tomador, TomadorSeguradora
@@ -255,3 +259,27 @@ class TestThrottle:
 
         assert terceira.status_code == status.HTTP_429_TOO_MANY_REQUESTS
         assert len(mail.outbox) == 2
+
+
+@pytest.mark.django_db
+class TestPremioNoEmail:
+    def test_usa_a_estimativa_enquanto_nao_cotou(self, cotacao):
+        # 200.000 / 365 * 1,5% * 30 = 246,58
+        corpo = services.cotacao_montar_email(cotacao=cotacao)["mensagem"]
+
+        assert "Junto Seguros: R$ 246,58" in corpo
+
+    def test_usa_o_premio_real_depois_de_cotar(self, cotacao):
+        """Cotou de verdade: vai o número da seguradora, não a nossa conta."""
+        EmissaoSeguradora.objects.create(
+            cotacao=cotacao,
+            seguradora=cotacao.seguradora,
+            integracao="junto",
+            ambiente="sandbox",
+            premio_total=Decimal("777.77"),
+        )
+
+        corpo = services.cotacao_montar_email(cotacao=cotacao)["mensagem"]
+
+        assert "Junto Seguros: R$ 777,77" in corpo
+        assert "246,58" not in corpo

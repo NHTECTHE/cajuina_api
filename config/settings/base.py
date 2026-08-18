@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "apps.modalidades",
     "apps.cotacoes",
     "apps.apolices",
+    "apps.emissoes",
     "apps.alterar_senha",
     "apps.atividades",
     "apps.notificacoes",

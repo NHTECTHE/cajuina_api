@@ -3,6 +3,7 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 
+from apps.emissoes.selectors import premios_cotados_por_seguradora
 from apps.notificacoes.models import Notificacao
 from apps.tomadores.models import TomadorSeguradora
 from apps.tomadores.selectors import tomador_seguradora_aptas
@@ -105,14 +106,22 @@ def cotacao_delete(*, cotacao: Cotacao) -> None:
 
 
 def _linhas_seguradoras(*, cotacao: Cotacao) -> str:
-    """Uma linha por seguradora apta, com o prêmio daquele par."""
+    """Uma linha por seguradora apta, com o prêmio daquele par.
+
+    Quando já se cotou de verdade naquela seguradora, o número que vai para o
+    cliente é o dela, não a nossa estimativa — mandar o valor calculado depois
+    de ter o preço real seria mandar um número que ninguém honra.
+    """
     if cotacao.importancia_segurada is None or not cotacao.prazo_dias:
         return "Nenhuma seguradora disponível"
+
+    reais = premios_cotados_por_seguradora(cotacao_id=cotacao.pk)
 
     linhas = [
         f"{vinculo.seguradora.nome}: "
         + formatar_brl(
-            _premio_pro_rata(
+            reais.get(vinculo.seguradora_id)
+            or _premio_pro_rata(
                 importancia_segurada=cotacao.importancia_segurada,
                 prazo_dias=cotacao.prazo_dias,
                 taxa=vinculo.taxa,

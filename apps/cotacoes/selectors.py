@@ -6,9 +6,11 @@ from .models import Cotacao
 
 
 def _base_qs():
+    # `emissoes` entra no prefetch por causa de `premio_seguradora` no
+    # serializer: sem ele a listagem faz uma consulta por cotação.
     return Cotacao.objects.select_related(
         "tomador", "modalidade", "segurado", "criado_por"
-    )
+    ).prefetch_related("emissoes")
 
 
 def cotacao_list(*, search: str = "", status: str = "") -> Iterable[Cotacao]:

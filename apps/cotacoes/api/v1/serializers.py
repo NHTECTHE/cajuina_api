@@ -32,6 +32,26 @@ class CotacaoSerializer(serializers.ModelSerializer):
         source="seguradora.nome", read_only=True, default=None
     )
     criado_por_nome = serializers.SerializerMethodField()
+    premio_seguradora = serializers.SerializerMethodField()
+
+    def get_premio_seguradora(self, obj) -> str | None:
+        """Prêmio real da seguradora escolhida, quando ela já foi cotada.
+
+        Não sobrescreve `premio`: aquele é a nossa estimativa e continua
+        valendo para cotação sem seguradora escolhida ou sem integração. Lê de
+        `obj.emissoes.all()` em Python para aproveitar o prefetch da listagem
+        em vez de uma consulta por linha.
+        """
+        if obj.seguradora_id is None:
+            return None
+        for emissao in obj.emissoes.all():
+            if emissao.seguradora_id == obj.seguradora_id:
+                return (
+                    str(emissao.premio_total)
+                    if emissao.premio_total is not None
+                    else None
+                )
+        return None
 
     class Meta:
         model = Cotacao
@@ -54,6 +74,7 @@ class CotacaoSerializer(serializers.ModelSerializer):
             "data_final",
             "importancia_segurada",
             "premio",
+            "premio_seguradora",
             "observacoes",
             "criado_por",
             "criado_por_nome",
@@ -65,6 +86,7 @@ class CotacaoSerializer(serializers.ModelSerializer):
             "id",
             "status",
             "premio",
+            "premio_seguradora",
             "criado_por",
             "criado_em",
             "atualizado_em",

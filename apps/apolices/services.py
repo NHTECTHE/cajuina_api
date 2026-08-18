@@ -13,10 +13,14 @@ from shared.utils import formatar_brl, formatar_data
 from .models import Apolice
 
 
-def _vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> date | None:
+def vencimento_boleto_default(*, cotacao: Cotacao, seguradora) -> date | None:
     """Data sugerida do boleto: hoje + dias_vencimento_efetivo do par
     tomador x seguradora, com fallback para o vencimento da própria
-    seguradora (embutido em dias_vencimento_efetivo)."""
+    seguradora (embutido em dias_vencimento_efetivo).
+
+    Pública porque `apps.emissoes.services` a usa para montar o
+    `dueDateFirstInstallment` da seguradora: a regra do par tomador x
+    seguradora vale nas duas portas de emissão, a manual e a integrada."""
     try:
         vinculo = TomadorSeguradora.objects.get(
             tomador_id=cotacao.tomador_id, seguradora=seguradora
@@ -40,7 +44,7 @@ def apolice_emitir(
     if data.get("vencimento_boleto") is None:
         data = {
             **data,
-            "vencimento_boleto": _vencimento_boleto_default(
+            "vencimento_boleto": vencimento_boleto_default(
                 cotacao=cotacao, seguradora=data["seguradora"]
             ),
         }

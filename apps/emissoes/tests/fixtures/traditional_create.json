@@ -1,0 +1,45 @@
+{
+  "id": 2601513,
+  "netPremiumValue": 500.00,
+  "totalPremiumValue": 500.00,
+  "pricing": {
+    "standardRate": 0.5,
+    "quotationRate": 0.5,
+    "isQuotationRateEnabled": true,
+    "comissionValue": 135.00,
+    "comissionRate": 27.0,
+    "flexRate": null,
+    "flexRateMaxValue": null,
+    "isFlexRateEnabled": false,
+    "flexCommissionValue": null,
+    "isFlexCommissionEnabled": false,
+    "flexCommissionMaxValue": null,
+    "flexRateCommissionValue": null,
+    "isFlexRateCommissionEnabled": false,
+    "flexRateCommissionMaxValue": null,
+    "flexRateCommissionMinValue": null
+  },
+  "selectedNumberOfInstallments": 1,
+  "numberOfMaxInstallments": 1,
+  "installmentOptions": [
+    {
+      "numberOfInstallments": 1,
+      "dueDateFirstInstallment": "2026-08-25T00:00:00+00:00",
+      "installments": [
+        {
+          "number": 1,
+          "dueDate": "2026-08-25T00:00:00+00:00",
+          "iof": 0.00,
+          "policyCost": 0.0,
+          "value": 500.00,
+          "additionalOfFractionation": 0.0
+        }
+      ],
+      "totalPremium": 500.00
+    }
+  ],
+  "useInvoice": false,
+  "urlQuote": "https://ms-gateway-box.juntoseguros.com/api_policies/quotes/download/vertical/3663633",
+  "isInProgress": false,
+  "isFidelizeProspection": false
+}
