@@ -355,3 +355,189 @@ class TomadorAtividadeListView(APIView):
             "usuario": atividade.usuario_nome or "Sistema",
             "detalhes": atividade.detalhes,
         }
+
+
+class TomadorSeguradoraJuntoVerificar(APIView):
+    """Verifica o cadastro do tomador na Junto.
+
+    Não deve cadastrar automaticamente; apenas atualiza o status do vínculo
+    e salva a data da última verificação e a validade do cadastro.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
+        try:
+            tomador = selectors.tomador_get(pk=tomador_pk)
+        except Tomador.DoesNotExist:
+            raise NotFound(detail="Tomador não encontrado.") from None
+
+        # Garantir vínculo existe
+        vinculo, _ = TomadorSeguradora.objects.get_or_create(
+            tomador=tomador, seguradora_id=seguradora_pk
+        )
+
+        # Integração com Junto
+        from shared.integracoes.junto.client import JuntoClient, JuntoAPIError
+        from django.utils import timezone
+
+        try:
+            client = JuntoClient(vinculo.seguradora)
+            result = client.consultar_tomador(tomador.cnpj)
+        except JuntoAPIError as e:
+            return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
+
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+
+        if result is None:
+            vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
+            vinculo.junto_validade_cadastro = None
+            vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
+            serializer = TomadorSeguradoraSerializer(vinculo)
+            return Response(_envelope(serializer.data))
+
+        # Se retornou dados, extrair validade (se houver) e considerar vencimento
+        validade = None
+        try:
+            validade_str = result.get("validade")
+            if validade_str:
+                from datetime import date
+
+                validade = date.fromisoformat(validade_str)
+                vinculo.junto_validade_cadastro = validade
+        except Exception:
+            vinculo.junto_validade_cadastro = None
+
+        # Verifica se validade está expirada
+        from django.utils.timezone import localdate
+
+        hoje = localdate()
+        if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+            vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+        else:
+            vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
+
+        vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
+        serializer = TomadorSeguradoraSerializer(vinculo)
+        return Response(_envelope(serializer.data))
+
+
+class TomadorSeguradoraJuntoSolicitar(APIView):
+    """Solicita o cadastro do tomador na Junto e registra atividade.
+
+    Evita solicitações duplicadas simultâneas e realiza polling breve para
+    confirmar processamento; se ainda estiver processando, retorna pendente
+    mantendo o vínculo como `sem_cadastro`.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
+        try:
+            tomador = selectors.tomador_get(pk=tomador_pk)
+        except Tomador.DoesNotExist:
+            raise NotFound(detail="Tomador não encontrado.") from None
+
+        vinculo, _ = TomadorSeguradora.objects.get_or_create(
+            tomador=tomador, seguradora_id=seguradora_pk
+        )
+
+        # Prevenir solicitações duplicadas imediatas: verificar se já existe
+        # uma atividade de Criação para este vínculo.
+        from apps.atividades.models import Atividade
+        from apps.atividades.services import atividade_create
+
+        existe_atividade = Atividade.objects.filter(
+            entidade="TomadorSeguradora", object_id=vinculo.id, acao="Criação"
+        ).exists()
+
+        if existe_atividade:
+            serializer = TomadorSeguradoraSerializer(vinculo)
+            return Response(_envelope(serializer.data))
+
+        # Registrar atividade de solicitação
+        usuario = request.user if request.user.is_authenticated else None
+        atividade_create(
+            usuario=usuario,
+            acao="Criação",
+            entidade="TomadorSeguradora",
+            object_id=vinculo.id,
+            item=str(vinculo),
+            detalhes="Solicitação de cadastro na Junto",
+        )
+
+        # Preparar payload mínimo para a Junto
+        dados = {
+            "cnpj": ''.join(filter(str.isdigit, tomador.cnpj or "")),
+            "nome": tomador.nome or tomador.nome_fantasia or "",
+            "email": tomador.email,
+        }
+
+        from shared.integracoes.junto.client import JuntoClient, JuntoAPIError
+        from django.utils import timezone
+
+        try:
+            client = JuntoClient(vinculo.seguradora)
+            resp = client.solicitar_cadastro_tomador(dados)
+        except JuntoAPIError as e:
+            return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
+
+        # Se resposta indicar processamento, tentar consultar algumas vezes
+        processing = False
+        try:
+            status_val = resp.get("status") if isinstance(resp, dict) else None
+            if status_val and str(status_val).lower() in ("processing", "pendente"):
+                processing = True
+        except Exception:
+            processing = False
+
+        if processing:
+            # Poll por alguns segundos
+            import time
+
+            found = None
+            for _ in range(4):
+                time.sleep(1)
+                try:
+                    found = client.consultar_tomador(tomador.cnpj)
+                except JuntoAPIError:
+                    found = None
+                if found:
+                    break
+
+            vinculo.junto_data_ultima_verificacao = timezone.now()
+
+            if found:
+                # Atualiza validade e status
+                try:
+                    from datetime import date
+
+                    validade_str = found.get("validade")
+                    if validade_str:
+                        vinculo.junto_validade_cadastro = date.fromisoformat(validade_str)
+                except Exception:
+                    vinculo.junto_validade_cadastro = None
+
+                from django.utils.timezone import localdate
+
+                hoje = localdate()
+                if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+                    vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+                else:
+                    vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
+
+                vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
+                serializer = TomadorSeguradoraSerializer(vinculo)
+                return Response(_envelope(serializer.data))
+
+            # Ainda processando: manter sem cadastro e informar pendente
+            vinculo.junto_data_ultima_verificacao = timezone.now()
+            vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
+            serializer = TomadorSeguradoraSerializer(vinculo)
+            return Response(_envelope({**serializer.data, "pendente": True}))
+
+        # Se não estava em processamento (retorno imediato), tentar interpretar resposta
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+        vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
+        serializer = TomadorSeguradoraSerializer(vinculo)
+        return Response(_envelope(serializer.data))

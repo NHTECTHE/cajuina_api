@@ -137,6 +137,9 @@ class TomadorSeguradora(models.Model):
         choices=Status.choices,
         default=Status.SEM_CADASTRO,
     )
+    # Campos relacionados à integração com a Junto
+    junto_data_ultima_verificacao = models.DateTimeField(null=True, blank=True)
+    junto_validade_cadastro = models.DateField(null=True, blank=True)
     premio_minimo = models.DecimalField(
         max_digits=14,
         decimal_places=2,

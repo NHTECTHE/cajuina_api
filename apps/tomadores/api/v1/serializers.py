@@ -124,6 +124,8 @@ class TomadorSeguradoraSerializer(serializers.ModelSerializer):
             "seguradora_nome",
             "seguradora_ativo",
             "status",
+            "junto_data_ultima_verificacao",
+            "junto_validade_cadastro",
             "taxa",
             "premio_minimo",
             "premio_minimo_efetivo",

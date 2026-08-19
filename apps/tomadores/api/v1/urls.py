@@ -9,6 +9,8 @@ from .views import (
     TomadorPremioAcumuladoView,
     TomadorSeguradoraDetailView,
     TomadorSeguradoraListView,
+    TomadorSeguradoraJuntoVerificar,
+    TomadorSeguradoraJuntoSolicitar,
 )
 
 urlpatterns = [
@@ -43,5 +45,15 @@ urlpatterns = [
         "<int:tomador_pk>/atividades/",
         TomadorAtividadeListView.as_view(),
         name="tomador-atividades-list",
+    ),
+    path(
+        "<int:tomador_pk>/seguradoras/<int:seguradora_pk>/junto/verificar/",
+        TomadorSeguradoraJuntoVerificar.as_view(),
+        name="tomador-seguradora-junto-verificar",
+    ),
+    path(
+        "<int:tomador_pk>/seguradoras/<int:seguradora_pk>/junto/solicitar/",
+        TomadorSeguradoraJuntoSolicitar.as_view(),
+        name="tomador-seguradora-junto-solicitar",
     ),
 ]
