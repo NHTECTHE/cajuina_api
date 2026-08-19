@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
@@ -225,7 +227,7 @@ class TestBulkUpsert:
         )
 
         vinculo = TomadorSeguradora.objects.get(tomador=tomador, seguradora=porto)
-        assert str(vinculo.taxa) == "3.00"
+        assert vinculo.taxa == Decimal("3.00")
 
     def test_seguradora_fora_do_payload_fica_intacta(
         self, auth_client, tomador, porto, junto
@@ -239,7 +241,7 @@ class TestBulkUpsert:
         )
 
         vinculo = TomadorSeguradora.objects.get(tomador=tomador, seguradora=junto)
-        assert str(vinculo.taxa) == "2.25"
+        assert vinculo.taxa == Decimal("2.25")
 
     def test_seguradora_repetida_retorna_400(self, auth_client, tomador, porto):
         payload = {

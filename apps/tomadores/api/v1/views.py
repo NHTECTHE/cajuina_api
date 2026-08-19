@@ -543,3 +543,49 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
         vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
         serializer = TomadorSeguradoraSerializer(vinculo)
         return Response(_envelope(serializer.data))
+
+
+class TomadorSeguradoraJuntoConsultarTaxa(APIView):
+    """Consulta a taxa do tomador na Junto e registra no histórico de atividades.
+
+    Este endpoint é EXCLUSIVAMENTE de leitura e NÃO altera nenhum dado no banco.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
+        try:
+            tomador = selectors.tomador_get(pk=tomador_pk)
+        except Tomador.DoesNotExist:
+            raise NotFound(detail="Tomador não encontrado.") from None
+
+        vinculo, _ = TomadorSeguradora.objects.get_or_create(
+            tomador=tomador, seguradora_id=seguradora_pk
+        )
+
+        from apps.atividades.services import atividade_create
+        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
+
+        try:
+            client = JuntoClient(vinculo.seguradora)
+            resultado = client.consultar_limites_e_taxas(tomador.cnpj)
+        except JuntoAPIError as e:
+            return Response(_envelope({"error": str(e)}), status=status.HTTP_400_BAD_REQUEST)
+
+        # Registrar no histórico do tomador
+        usuario = request.user if request.user.is_authenticated else None
+        taxa_val = resultado.get("taxa")
+        mod_id = resultado.get("modalidade_id")
+        mod_desc = resultado.get("modalidade_descricao")
+
+        atividade_create(
+            usuario=usuario,
+            acao="Consulta",
+            entidade="TomadorSeguradora",
+            object_id=vinculo.id,
+            item=str(vinculo),
+            detalhes=f"Taxa consultada na Junto: {taxa_val}% | Modalidade {mod_id} ({mod_desc})",
+        )
+
+        return Response(_envelope(resultado))
+

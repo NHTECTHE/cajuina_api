@@ -126,12 +126,18 @@ class TomadorSeguradora(models.Model):
     )
 
     taxa = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
+        max_digits=10,
+        decimal_places=6,
         default=0,
         validators=[MinValueValidator(0)],
         help_text="Zero deixa a seguradora fora das cotações deste tomador.",
     )
+    taxa_origem = models.CharField(max_length=20, blank=True, default="")
+    taxa_junto_modalidade_id = models.CharField(max_length=50, blank=True, default="")
+    taxa_junto_modalidade_descricao = models.CharField(
+        max_length=255, blank=True, default=""
+    )
+    taxa_data_atualizacao = models.DateTimeField(null=True, blank=True)
     status = models.CharField(
         max_length=20,
         choices=Status.choices,

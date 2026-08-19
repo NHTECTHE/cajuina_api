@@ -129,3 +129,129 @@ class TestJuntoIntegration:
         assert resp2.status_code == status.HTTP_200_OK
         atividades = Atividade.objects.filter(entidade="TomadorSeguradora", object_id=vinculo.id, acao="Criação")
         assert atividades.count() == 1
+
+    def test_consultar_taxa_read_only_and_records_activity(self, auth_client, tomador, junto, monkeypatch):
+        from decimal import Decimal
+
+        from shared.integracoes.junto import client as junto_client_module
+
+        class FakeClient:
+            def __init__(self, seguradora):
+                self.seguradora = seguradora
+
+            def consultar_limites_e_taxas(self, cnpj):
+                return {
+                    "limite_disponivel": "500000.00",
+                    "modalidade_id": "99",
+                    "modalidade_descricao": "Licitante",
+                    "taxa": Decimal("1.2478"),
+                    "data_consulta": "2026-08-19T18:00:00Z",
+                    "origem": "junto",
+                }
+
+        monkeypatch.setattr(junto_client_module, "JuntoClient", FakeClient)
+
+        url = reverse("tomador-seguradora-junto-taxa", args=[tomador.pk, junto.pk])
+        resp = auth_client.post(url, {}, format="json")
+
+        assert resp.status_code == status.HTTP_200_OK
+        data = resp.data["data"]
+        assert data["taxa"] == Decimal("1.2478")
+        assert data["modalidade_id"] == "99"
+        assert data["modalidade_descricao"] == "Licitante"
+
+        # Verifica que o endpoint NÃO alterou o banco de dados diretamente
+        vinculo = TomadorSeguradora.objects.get(tomador=tomador, seguradora=junto)
+        assert vinculo.taxa == Decimal("0")
+
+        # Verifica que a consulta foi registrada no histórico de atividades
+        atividades = Atividade.objects.filter(entidade="TomadorSeguradora", object_id=vinculo.id, acao="Consulta")
+        assert atividades.count() == 1
+        assert "Taxa consultada na Junto: 1.2478" in atividades.first().detalhes
+
+    def test_taxa_6_casas_e_origem_salvas(self, auth_client, tomador, junto):
+        from decimal import Decimal
+
+        url = reverse("tomador-seguradora-list", args=[tomador.pk])
+        payload = {
+            "itens": [
+                {
+                    "seguradora": junto.pk,
+                    "status": "sem_cadastro",
+                    "taxa": "1.247800",
+                    "taxa_origem": "junto",
+                    "taxa_junto_modalidade_id": "99",
+                    "taxa_junto_modalidade_descricao": "Licitante",
+                    "taxa_data_atualizacao": "2026-08-19T18:00:00Z",
+                    "premio_minimo": None,
+                    "dias_vencimento": None,
+                }
+            ]
+        }
+        resp = auth_client.put(url, payload, format="json")
+        assert resp.status_code == status.HTTP_200_OK
+
+        vinculo = TomadorSeguradora.objects.get(tomador=tomador, seguradora=junto)
+        assert vinculo.taxa == Decimal("1.2478")
+        assert vinculo.taxa_origem == "junto"
+        assert vinculo.taxa_junto_modalidade_id == "99"
+
+    def test_edicao_manual_limpa_origem(self, auth_client, tomador, junto):
+        from decimal import Decimal
+
+        url = reverse("tomador-seguradora-list", args=[tomador.pk])
+        payload = {
+            "itens": [
+                {
+                    "seguradora": junto.pk,
+                    "status": "sem_cadastro",
+                    "taxa": "1.50",
+                    "taxa_origem": "",
+                    "taxa_junto_modalidade_id": "",
+                    "taxa_junto_modalidade_descricao": "",
+                    "taxa_data_atualizacao": None,
+                    "premio_minimo": None,
+                    "dias_vencimento": None,
+                }
+            ]
+        }
+        resp = auth_client.put(url, payload, format="json")
+        assert resp.status_code == status.HTTP_200_OK
+
+        vinculo = TomadorSeguradora.objects.get(tomador=tomador, seguradora=junto)
+        assert vinculo.taxa == Decimal("1.5")
+        assert vinculo.taxa_origem == ""
+        assert vinculo.taxa_junto_modalidade_id == ""
+
+    def test_taxa_com_mais_de_6_casas_retorna_erro(self, auth_client, tomador, junto):
+        url = reverse("tomador-seguradora-list", args=[tomador.pk])
+        payload = {
+            "itens": [
+                {
+                    "seguradora": junto.pk,
+                    "status": "sem_cadastro",
+                    "taxa": "1.1234567",
+                    "premio_minimo": None,
+                    "dias_vencimento": None,
+                }
+            ]
+        }
+        resp = auth_client.put(url, payload, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+    def test_taxa_maior_ou_igual_1000_retorna_erro(self, auth_client, tomador, junto):
+        url = reverse("tomador-seguradora-list", args=[tomador.pk])
+        payload = {
+            "itens": [
+                {
+                    "seguradora": junto.pk,
+                    "status": "sem_cadastro",
+                    "taxa": "1000.00",
+                    "premio_minimo": None,
+                    "dias_vencimento": None,
+                }
+            ]
+        }
+        resp = auth_client.put(url, payload, format="json")
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
