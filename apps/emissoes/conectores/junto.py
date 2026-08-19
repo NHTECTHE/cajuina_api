@@ -19,11 +19,15 @@ import httpx
 
 from .base import (
     DadosCotacao,
+    DadosSegurado,
     ErroSeguradora,
     ErroValidacaoSeguradora,
     OpcaoParcelamento,
     Parcela,
+    Pendencia,
     RespostaCotacao,
+    RespostaMinuta,
+    SeguradoJunto,
     SeguradoraIndisponivel,
 )
 
@@ -38,6 +42,12 @@ BASE_URLS = {
 # ~6s no caminho feliz, e 15s deixa margem estreita para o dia ruim deles.
 # É ação disparada pelo usuário com spinner na tela, não job de background.
 TIMEOUT_PADRAO = 30.0
+
+# A minuta é outra ordem de grandeza: medida em 81s contra o sandbox em
+# 2026-08-19, com o mesmo documento que dias antes respondera em menos de 60s.
+# Com os 30s do padrão a chamada estourava e o usuário via "a seguradora não
+# respondeu" para uma minuta que a Junto estava gerando normalmente.
+TIMEOUT_MINUTA = 150.0
 
 # Renova o token um pouco antes de expirar: uma chamada que sai com token no
 # limite chega do outro lado já vencida.
@@ -112,8 +122,8 @@ class ConectorJunto:
 
     # ─── HTTP ────────────────────────────────────────────────────────────────
 
-    def _cliente(self) -> httpx.Client:
-        return httpx.Client(timeout=self.timeout, transport=self._transport)
+    def _cliente(self, timeout: float | None = None) -> httpx.Client:
+        return httpx.Client(timeout=timeout or self.timeout, transport=self._transport)
 
     @staticmethod
     def _corpo_decimal(resp: httpx.Response) -> Any:
@@ -204,14 +214,25 @@ class ConectorJunto:
             _TOKEN_CACHE[self._chave_cache()] = (token, validade)
         return token
 
-    def _chamar(self, metodo: str, caminho: str, *, payload: dict | None = None):
-        """Chamada de negócio. Um 401 renova o token e repete uma única vez."""
+    def _chamar(
+        self,
+        metodo: str,
+        caminho: str,
+        *,
+        payload: dict | None = None,
+        timeout: float | None = None,
+    ):
+        """Chamada de negócio. Um 401 renova o token e repete uma única vez.
+
+        `timeout` permite que uma etapa lenta (a minuta) espere mais sem
+        afrouxar o limite das rápidas.
+        """
         url = f"{self.base_url}{caminho}"
         resp = None
         for tentativa in (1, 2):
             token = self._token(renovar=tentativa == 2)
             try:
-                with self._cliente() as cliente:
+                with self._cliente(timeout) as cliente:
                     resp = cliente.request(
                         metodo,
                         url,
@@ -358,3 +379,133 @@ class ConectorJunto:
             "PUT", f"/guarantee/api/v2/traditional/{external_id}", payload=payload
         )
         return self._parse_cotacao(resp, payload, external_id=external_id)
+
+    # ─── Segurado ────────────────────────────────────────────────────────────
+
+    def _segurado_da_resposta(self, corpo: Any) -> SeguradoJunto | None:
+        itens = corpo.get("data") if isinstance(corpo, dict) else corpo
+        if not itens:
+            return None
+        primeiro = itens[0]
+        if not primeiro.get("id"):
+            return None
+        enderecos = primeiro.get("address") or []
+        return SeguradoJunto(
+            insured_id=int(primeiro["id"]),
+            # Com vários endereços a Junto aceita qualquer um dos ids; o
+            # primeiro é o que a tela dela mostra por padrão.
+            address_id=int(enderecos[0]["addressId"]) if enderecos else None,
+        )
+
+    def buscar_segurado(self, *, federal_id: str) -> SeguradoJunto | None:
+        """Procura o segurado pelo CNPJ. `None` quando não existe lá.
+
+        A busca sem nenhum parâmetro devolve 400 na Junto, então o CNPJ é
+        obrigatório — quem chama já garante isso.
+        """
+        cnpj = so_digitos(federal_id)
+        resp = self._chamar("GET", f"/guarantee/api/v2/insured?federalId={cnpj}")
+        return self._segurado_da_resposta(self._corpo_bruto(resp))
+
+    def cadastrar_segurado(self, *, dados: DadosSegurado) -> SeguradoJunto:
+        """Cria o segurado na Junto. Só é chamado quando a busca não achou."""
+        payload: dict[str, Any] = {
+            "federalId": so_digitos(dados.federal_id),
+            "name": dados.nome,
+            "insuredType": dados.tipo,
+            "address": {
+                "street": dados.logradouro,
+                "city": dados.cidade,
+                "state": dados.uf,
+                "zipCode": so_digitos(dados.cep),
+                "addressComplement": dados.complemento,
+            },
+        }
+        if dados.email:
+            payload["email"] = dados.email
+        if dados.telefone:
+            payload["phone"] = dados.telefone
+
+        resp = self._chamar("POST", "/guarantee/api/v2/insured", payload=payload)
+        criado = self._segurado_da_resposta([self._corpo_bruto(resp)])
+        if criado is None:
+            raise SeguradoraIndisponivel(
+                "A seguradora não devolveu o identificador do segurado criado."
+            )
+        return criado
+
+    # ─── Minuta ──────────────────────────────────────────────────────────────
+
+    def listar_pendencias(self, *, document_number: str) -> list[Pendencia]:
+        """Pendências que travam a liberação do PDF pela seguradora."""
+        resp = self._chamar(
+            "GET", f"/guarantee/api/v2/policies/{document_number}/hangs"
+        )
+        corpo = self._corpo_bruto(resp)
+        itens = corpo if isinstance(corpo, list) else (corpo.get("data") or [])
+        pendencias = []
+        for item in itens:
+            dep = item.get("department") or {}
+            pendencias.append(
+                Pendencia(
+                    codigo=int(item.get("code") or 0),
+                    # A Junto manda espaço sobrando no fim das descrições.
+                    descricao=str(item.get("description") or "").strip(),
+                    departamento=str(dep.get("name") or "").strip(),
+                    email=str(dep.get("email") or "").strip(),
+                )
+            )
+        return pendencias
+
+    def gerar_minuta(
+        self,
+        *,
+        external_id: str,
+        edital: str,
+        segurado: SeguradoJunto,
+        forcar_url: bool = False,
+    ) -> RespostaMinuta:
+        """Passo 2: gera a minuta da apólice.
+
+        O bloco `insured` não é opcional na prática: sem ele a Junto devolve
+        500 (`NullReferenceException`), verificado contra o sandbox. E o
+        `draftUrl` vem vazio quando há pendência — só `isForceDraftUrl` destrava
+        o PDF, o que é decisão do usuário, não nossa.
+        """
+        payload: dict[str, Any] = {
+            "publicNoticeOrContract": edital,
+            "insured": {"insuredId": segurado.insured_id},
+        }
+        if segurado.address_id is not None:
+            payload["insured"]["insuredAddressId"] = segurado.address_id
+        if forcar_url:
+            payload["isForceDraftUrl"] = True
+
+        resp = self._chamar(
+            "PUT",
+            f"/guarantee/api/v2/traditional/{external_id}/draft",
+            payload=payload,
+            timeout=TIMEOUT_MINUTA,
+        )
+        corpo = self._corpo_bruto(resp)
+        if not isinstance(corpo, dict):
+            raise SeguradoraIndisponivel(
+                "A seguradora respondeu a minuta num formato inesperado."
+            )
+
+        document_number = str(corpo.get("documentNumber") or "")
+        tem_pendencias = bool(corpo.get("hasHangs"))
+        # Só consulta pendências quando há: uma chamada a menos no caminho feliz.
+        pendencias = (
+            self.listar_pendencias(document_number=document_number)
+            if tem_pendencias and document_number
+            else []
+        )
+        return RespostaMinuta(
+            document_number=document_number,
+            url_minuta=str(corpo.get("draftUrl") or ""),
+            tem_pendencias=tem_pendencias,
+            pendencias=pendencias,
+            request_bruto=payload,
+            resposta_bruta=corpo,
+        )

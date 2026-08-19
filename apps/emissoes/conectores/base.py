@@ -94,6 +94,49 @@ class RespostaCotacao:
     resposta_bruta: dict[str, Any] = field(default_factory=dict)
 
 
+@dataclass(frozen=True)
+class DadosSegurado:
+    """O que a Junto exige para cadastrar um segurado (`POST /insured`)."""
+
+    federal_id: str
+    nome: str
+    # 8 = empresa pública, 9 = empresa privada. Não há terceira opção na API.
+    tipo: int
+    logradouro: str
+    cidade: str
+    uf: str
+    cep: str
+    complemento: str = ""
+    email: str = ""
+    telefone: str = ""
+
+
+@dataclass(frozen=True)
+class SeguradoJunto:
+    """Identificadores do segurado do lado da seguradora."""
+
+    insured_id: int
+    address_id: int | None
+
+
+@dataclass(frozen=True)
+class Pendencia:
+    codigo: int
+    descricao: str
+    departamento: str
+    email: str
+
+
+@dataclass(frozen=True)
+class RespostaMinuta:
+    document_number: str
+    url_minuta: str
+    tem_pendencias: bool
+    pendencias: list[Pendencia]
+    request_bruto: dict[str, Any] = field(default_factory=dict)
+    resposta_bruta: dict[str, Any] = field(default_factory=dict)
+
+
 class ConectorSeguradora(Protocol):
     """Métodos que o `services.py` sabe chamar.
 
@@ -106,3 +149,16 @@ class ConectorSeguradora(Protocol):
     def atualizar_cotacao(
         self, *, external_id: str, dados: DadosCotacao
     ) -> RespostaCotacao: ...
+
+    def buscar_segurado(self, *, federal_id: str) -> SeguradoJunto | None: ...
+
+    def cadastrar_segurado(self, *, dados: DadosSegurado) -> SeguradoJunto: ...
+
+    def gerar_minuta(
+        self,
+        *,
+        external_id: str,
+        edital: str,
+        segurado: SeguradoJunto,
+        forcar_url: bool = False,
+    ) -> RespostaMinuta: ...

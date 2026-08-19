@@ -16,7 +16,12 @@ from apps.modalidades.models import ModalidadeNaoMapeada
 from apps.modalidades.selectors import codigo_para_seguradora
 from apps.seguradoras.models import Seguradora
 
-from .conectores.base import DadosCotacao, IntegracaoNaoSuportada
+from .conectores.base import (
+    DadosCotacao,
+    DadosSegurado,
+    IntegracaoNaoSuportada,
+    SeguradoJunto,
+)
 from .conectores.junto import so_digitos
 from .conectores.registry import get_conector
 from .models import EmissaoSeguradora
@@ -200,5 +205,101 @@ def emissao_cotar(
     emissao.ultima_resposta = resposta.resposta_bruta
     emissao.codigo_retorno = ""
     emissao.mensagem = ""
+    emissao.save()
+    return emissao
+
+
+def _tipo_segurado(segurado) -> int:
+    """8 = empresa pública, 9 = privada — não há terceira opção na Junto.
+
+    A natureza jurídica da Receita começa com 1 para administração pública
+    (1xx). Qualquer outra coisa, inclusive natureza em branco, é tratada como
+    privada: é o caso esmagadoramente mais comum.
+    """
+    codigo = (segurado.natureza_juridica or "").strip()
+    return 8 if codigo.startswith("1") else 9
+
+
+def _resolver_segurado(*, cotacao: Cotacao, conector) -> SeguradoJunto:
+    """Garante que o segurado existe na Junto, cadastrando quando não existe."""
+    segurado = cotacao.segurado
+    federal_id = so_digitos(segurado.cnpj)
+
+    achado = conector.buscar_segurado(federal_id=federal_id)
+    if achado is not None:
+        return achado
+
+    return conector.cadastrar_segurado(
+        dados=DadosSegurado(
+            federal_id=federal_id,
+            nome=segurado.nome,
+            tipo=_tipo_segurado(segurado),
+            logradouro=segurado.endereco,
+            cidade=segurado.cidade,
+            uf=segurado.estado,
+            cep=segurado.cep,
+            complemento=segurado.complemento,
+        )
+    )
+
+
+def _validar_para_minuta(cotacao: Cotacao, emissao: EmissaoSeguradora | None) -> None:
+    if emissao is None or not emissao.external_id:
+        raise ValidationError("É preciso cotar na seguradora antes de gerar a minuta.")
+    if not (cotacao.edital or "").strip():
+        raise ValidationError("Informe o edital/contrato antes de gerar a minuta.")
+    if cotacao.segurado_id is None:
+        raise ValidationError("Informe o segurado antes de gerar a minuta.")
+    if not so_digitos(cotacao.segurado.cnpj):
+        raise ValidationError("O segurado precisa de CNPJ para gerar a minuta.")
+
+
+@transaction.atomic
+def emissao_gerar_minuta(
+    *, cotacao_id: int, seguradora_id: int, forcar_url: bool = False, conector=None
+) -> EmissaoSeguradora:
+    """Passo 2: gera a minuta da apólice na seguradora.
+
+    `forcar_url` existe porque a Junto devolve `draftUrl` vazio quando a
+    cotação tem pendências. A tela mostra quais são e só repete com o forçado
+    quando o usuário decide seguir assim.
+    """
+    cotacao = Cotacao.objects.select_for_update().get(pk=cotacao_id)
+    seguradora = Seguradora.objects.get(pk=seguradora_id)
+    emissao = EmissaoSeguradora.objects.filter(
+        cotacao=cotacao, seguradora=seguradora
+    ).first()
+    _validar_para_minuta(cotacao, emissao)
+
+    if conector is None:
+        try:
+            conector = get_conector(seguradora)
+        except IntegracaoNaoSuportada as exc:
+            raise ValidationError(str(exc)) from None
+
+    segurado = _resolver_segurado(cotacao=cotacao, conector=conector)
+
+    resposta = conector.gerar_minuta(
+        external_id=emissao.external_id,
+        edital=cotacao.edital,
+        segurado=segurado,
+        forcar_url=forcar_url,
+    )
+
+    emissao.etapa = EmissaoSeguradora.ETAPA_MINUTA
+    emissao.document_number = resposta.document_number
+    emissao.url_minuta = resposta.url_minuta
+    emissao.tem_pendencias = resposta.tem_pendencias
+    emissao.pendencias = [
+        {
+            "codigo": p.codigo,
+            "descricao": p.descricao,
+            "departamento": p.departamento,
+            "email": p.email,
+        }
+        for p in resposta.pendencias
+    ]
+    emissao.ultimo_request = resposta.request_bruto
+    emissao.ultima_resposta = resposta.resposta_bruta
     emissao.save()
     return emissao

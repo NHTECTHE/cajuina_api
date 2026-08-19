@@ -21,6 +21,21 @@ def _envelope(data) -> dict:
     return {"data": data}
 
 
+def _ler_seguradora_id(request: Request) -> int:
+    """Lê e valida `seguradora` do body.
+
+    Levanta `ValidationError` do Django, que as views já sabem transformar em
+    400 — assim as duas etapas leem o campo do mesmo jeito.
+    """
+    bruto = request.data.get("seguradora")
+    if bruto in (None, ""):
+        raise ValidationError("Informe a seguradora.")
+    try:
+        return int(bruto)
+    except (TypeError, ValueError):
+        raise ValidationError("Seguradora inválida.") from None
+
+
 class EmissaoEstadoView(APIView):
     """Estado persistido do wizard, uma linha por seguradora já cotada.
 
@@ -46,22 +61,10 @@ class EmissaoCotarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request, pk: int) -> Response:
-        bruto = request.data.get("seguradora")
-        if bruto in (None, ""):
-            return Response(
-                {"detail": "Informe a seguradora para cotar."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         try:
-            seguradora_id = int(bruto)
-        except (TypeError, ValueError):
-            return Response(
-                {"detail": "Seguradora inválida."},
-                status=status.HTTP_400_BAD_REQUEST,
+            emissao = services.emissao_cotar(
+                cotacao_id=pk, seguradora_id=_ler_seguradora_id(request)
             )
-
-        try:
-            emissao = services.emissao_cotar(cotacao_id=pk, seguradora_id=seguradora_id)
         except Cotacao.DoesNotExist:
             raise NotFound(detail="Cotação não encontrada.") from None
         except Seguradora.DoesNotExist:
@@ -73,6 +76,34 @@ class EmissaoCotarView(APIView):
         except ErroValidacaoSeguradora as exc:
             # Mensagem da seguradora repassada: é acionável pelo usuário
             # ("CNPJ não cadastrado", "limite insuficiente").
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        except SeguradoraIndisponivel as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
+
+        return Response(_envelope(EmissaoSeguradoraSerializer(emissao).data))
+
+
+class EmissaoMinutaView(APIView):
+    """Passo 2: gera a minuta da apólice na seguradora."""
+
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request: Request, pk: int) -> Response:
+        try:
+            emissao = services.emissao_gerar_minuta(
+                cotacao_id=pk,
+                seguradora_id=_ler_seguradora_id(request),
+                forcar_url=bool(request.data.get("forcar_url")),
+            )
+        except Cotacao.DoesNotExist:
+            raise NotFound(detail="Cotação não encontrada.") from None
+        except Seguradora.DoesNotExist:
+            raise NotFound(detail="Seguradora não encontrada.") from None
+        except ValidationError as exc:
+            return Response(
+                {"detail": exc.messages[0]}, status=status.HTTP_400_BAD_REQUEST
+            )
+        except ErroValidacaoSeguradora as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
         except SeguradoraIndisponivel as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
