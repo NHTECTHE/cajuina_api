@@ -1,4 +1,5 @@
 import logging
+
 import requests
 from django.conf import settings
 
@@ -67,12 +68,12 @@ class JuntoClient:
 
             return response
 
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as e:
             logger.error(f"Timeout ao chamar a Junto no endpoint {endpoint}")
-            raise JuntoAPIError("Tempo de resposta da Junto excedido.")
+            raise JuntoAPIError("Tempo de resposta da Junto excedido.") from e
         except requests.exceptions.RequestException as e:
             logger.error(f"Erro de conexão com a Junto: {str(e)}")
-            raise JuntoAPIError("Erro ao conectar com a Junto Seguros.")
+            raise JuntoAPIError("Erro ao conectar com a Junto Seguros.") from e
 
     def _clean_cnpj(self, cnpj: str) -> str:
         if not cnpj:

@@ -8,9 +8,9 @@ from .views import (
     TomadorListCreateView,
     TomadorPremioAcumuladoView,
     TomadorSeguradoraDetailView,
-    TomadorSeguradoraListView,
-    TomadorSeguradoraJuntoVerificar,
     TomadorSeguradoraJuntoSolicitar,
+    TomadorSeguradoraJuntoVerificar,
+    TomadorSeguradoraListView,
 )
 
 urlpatterns = [

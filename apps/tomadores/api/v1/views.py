@@ -378,8 +378,9 @@ class TomadorSeguradoraJuntoVerificar(APIView):
         )
 
         # Integração com Junto
-        from shared.integracoes.junto.client import JuntoClient, JuntoAPIError
         from django.utils import timezone
+
+        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
 
         try:
             client = JuntoClient(vinculo.seguradora)
@@ -473,8 +474,9 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
             "email": tomador.email,
         }
 
-        from shared.integracoes.junto.client import JuntoClient, JuntoAPIError
         from django.utils import timezone
+
+        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
 
         try:
             client = JuntoClient(vinculo.seguradora)

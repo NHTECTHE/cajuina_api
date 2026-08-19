@@ -1,12 +1,13 @@
-import pytest
-from django.urls import reverse
-from rest_framework import status
-from apps.seguradoras.models import Seguradora
-from apps.tomadores.models import TomadorSeguradora, Tomador
-from apps.atividades.models import Atividade
-from django.utils import timezone
 from datetime import timedelta
 
+import pytest
+from django.urls import reverse
+from django.utils import timezone
+from rest_framework import status
+
+from apps.atividades.models import Atividade
+from apps.seguradoras.models import Seguradora
+from apps.tomadores.models import Tomador, TomadorSeguradora
 
 # Fixtures localizados para tornar o arquivo de testes independente
 
