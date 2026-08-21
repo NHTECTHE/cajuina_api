@@ -1,7 +1,12 @@
+import logging
+import re
+from datetime import timedelta
 from decimal import Decimal
 
+from django.db import transaction
 from django.db.models import Q, Sum
-from django.utils.timezone import localtime
+from django.utils import timezone
+from django.utils.timezone import localdate, localtime
 from rest_framework import status
 from rest_framework.exceptions import NotFound
 from rest_framework.parsers import FormParser, MultiPartParser
@@ -12,6 +17,12 @@ from rest_framework.views import APIView
 
 from apps.apolices.models import Apolice
 from apps.atividades.models import Atividade
+from apps.atividades.services import atividade_create
+from apps.emissoes.conectores.base import (
+    ErroSeguradora,
+    SeguradoraIndisponivel,
+)
+from apps.emissoes.conectores.registry import get_conector
 from apps.seguradoras.models import Seguradora
 from apps.tomadores import selectors, services
 from apps.tomadores.models import Tomador, TomadorArquivo, TomadorSeguradora
@@ -23,7 +34,13 @@ from .serializers import (
     TomadorSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 ZERO = Decimal("0.00")
+
+# Prefixo usado para achar a solicitação recente no histórico. Fica numa constante
+# porque a busca por `detalhes__startswith` quebra calada se o texto divergir.
+_DETALHE_SOLICITACAO = "Cadastro solicitado na"
 
 
 def _envelope(data) -> dict:
@@ -357,235 +374,223 @@ class TomadorAtividadeListView(APIView):
         }
 
 
-class TomadorSeguradoraJuntoVerificar(APIView):
+class _JuntoViewBase(APIView):
+    """Pré-condições e tradução de erro comuns às três views da Junto."""
+
+    permission_classes = [IsAuthenticated]
+
+    def _preparar(self, tomador_pk: int, seguradora_pk: int, acao: str):
+        """Valida antes de gastar uma chamada de rede.
+
+        Devolve `(tomador, seguradora, None)` ou `(None, None, Response)` com o
+        erro já montado no envelope do projeto.
+        """
+        tomador = _get_tomador_or_404(tomador_pk)
+        try:
+            seguradora = Seguradora.objects.get(pk=seguradora_pk)
+        except Seguradora.DoesNotExist:
+            raise NotFound(detail="Seguradora não encontrada.") from None
+
+        if not (seguradora.integracao or "").strip():
+            return None, None, self._erro(
+                f"Esta seguradora não tem {acao} integrada.",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(re.sub(r"\D", "", tomador.cnpj or "")) != 14:
+            return None, None, self._erro(
+                "CNPJ inválido.", status.HTTP_400_BAD_REQUEST
+            )
+
+        return tomador, seguradora, None
+
+    @staticmethod
+    def _erro(mensagem: str, codigo: int) -> Response:
+        return Response(_envelope({"error": mensagem}), status=codigo)
+
+    def _traduzir_erro(self, exc: ErroSeguradora) -> Response:
+        """`SeguradoraIndisponivel` é 502; recusa de negócio é 400.
+
+        A distinção importa: 400 pede correção ao usuário, 502 pede que ele tente
+        de novo. Colapsar os dois foi o que fazia falha de credencial aparecer na
+        tela como "tomador sem cadastro".
+        """
+        if isinstance(exc, SeguradoraIndisponivel):
+            return self._erro(str(exc), status.HTTP_502_BAD_GATEWAY)
+        return self._erro(str(exc), status.HTTP_400_BAD_REQUEST)
+
+
+class TomadorSeguradoraJuntoVerificar(_JuntoViewBase):
     """Verifica o cadastro do tomador na Junto.
 
-    Não deve cadastrar automaticamente; apenas atualiza o status do vínculo
-    e salva a data da última verificação e a validade do cadastro.
+    Não cadastra: apenas atualiza o status do vínculo e salva a data da última
+    verificação e a validade do cadastro.
     """
 
-    permission_classes = [IsAuthenticated]
-
     def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
-        try:
-            tomador = selectors.tomador_get(pk=tomador_pk)
-        except Tomador.DoesNotExist:
-            raise NotFound(detail="Tomador não encontrado.") from None
-
-        # Garantir vínculo existe
-        vinculo, _ = TomadorSeguradora.objects.get_or_create(
-            tomador=tomador, seguradora_id=seguradora_pk
+        tomador, seguradora, erro = self._preparar(
+            tomador_pk, seguradora_pk, "verificação automática de cadastro"
         )
-
-        # Integração com Junto
-        from django.utils import timezone
-
-        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
+        if erro is not None:
+            return erro
 
         try:
-            client = JuntoClient(vinculo.seguradora)
-            result = client.consultar_tomador(tomador.cnpj)
-        except JuntoAPIError as e:
-            return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
+            info = get_conector(seguradora).consultar_tomador(cnpj=tomador.cnpj)
+        except ErroSeguradora as e:
+            return self._traduzir_erro(e)
 
-        vinculo.junto_data_ultima_verificacao = timezone.now()
-
-        if result is None:
-            vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
-            vinculo.junto_validade_cadastro = None
-            vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
-            serializer = TomadorSeguradoraSerializer(vinculo)
-            return Response(_envelope(serializer.data))
-
-        # Se retornou dados, extrair validade (se houver) e considerar vencimento
-        validade = None
-        try:
-            validade_str = result.get("validade")
-            if validade_str:
-                from datetime import date
-
-                validade = date.fromisoformat(validade_str)
-                vinculo.junto_validade_cadastro = validade
-        except Exception:
-            vinculo.junto_validade_cadastro = None
-
-        # Verifica se validade está expirada
-        from django.utils.timezone import localdate
-
+        agora = timezone.now()
         hoje = localdate()
-        if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
-            vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
-        else:
-            vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
+        validade = info.valido_ate if info else None
 
-        vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
+        with transaction.atomic():
+            vinculo, _criado = TomadorSeguradora.objects.select_for_update().get_or_create(
+                tomador=tomador, seguradora=seguradora
+            )
+            vinculo.junto_data_ultima_verificacao = agora
+            vinculo.junto_validade_cadastro = validade
+            # Cadastro vencido conta como sem cadastro: o POST de cadastro renova.
+            vinculo.status = (
+                TomadorSeguradora.Status.CADASTRO_OK
+                if validade and validade >= hoje
+                else TomadorSeguradora.Status.SEM_CADASTRO
+            )
+            vinculo.save(
+                update_fields=[
+                    "status",
+                    "junto_data_ultima_verificacao",
+                    "junto_validade_cadastro",
+                    "atualizado_em",
+                ]
+            )
+
         serializer = TomadorSeguradoraSerializer(vinculo)
         return Response(_envelope(serializer.data))
 
 
-class TomadorSeguradoraJuntoSolicitar(APIView):
+class TomadorSeguradoraJuntoSolicitar(_JuntoViewBase):
     """Solicita o cadastro do tomador na Junto e registra atividade.
 
-    Evita solicitações duplicadas simultâneas e realiza polling breve para
-    confirmar processamento; se ainda estiver processando, retorna pendente
-    mantendo o vínculo como `sem_cadastro`.
+    Devolve `pendente` na hora: a Junto leva de 8 a 10 segundos em média e às
+    vezes muito mais. Esperar aqui prenderia um worker do gunicorn por requisição
+    e estouraria o `proxy_read_timeout` do nginx. Quem confirma é o botão
+    "Verificar cadastro".
     """
 
-    permission_classes = [IsAuthenticated]
+    # Janela curta só para o duplo clique e o retry impaciente. Não é trava
+    # permanente: se a primeira tentativa falhar, o usuário precisa poder repetir.
+    JANELA_ANTIDUPLICIDADE = timedelta(minutes=5)
 
     def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
+        tomador, seguradora, erro = self._preparar(
+            tomador_pk, seguradora_pk, "cadastro automático"
+        )
+        if erro is not None:
+            return erro
+
+        with transaction.atomic():
+            vinculo, _criado = TomadorSeguradora.objects.select_for_update().get_or_create(
+                tomador=tomador, seguradora=seguradora
+            )
+
+            recente = Atividade.objects.filter(
+                entidade="Tomador",
+                object_id=tomador.id,
+                acao="ATUALIZAÇÃO",
+                detalhes__startswith=_DETALHE_SOLICITACAO,
+                criado_em__gte=timezone.now() - self.JANELA_ANTIDUPLICIDADE,
+            ).exists()
+
+        if recente:
+            return self._erro(
+                "Já existe uma solicitação em andamento para este tomador. "
+                "Use 'Verificar cadastro' em instantes.",
+                status.HTTP_409_CONFLICT,
+            )
+
+        # Só o CNPJ vai: a Junto puxa razão social e endereço das fontes dela.
         try:
-            tomador = selectors.tomador_get(pk=tomador_pk)
-        except Tomador.DoesNotExist:
-            raise NotFound(detail="Tomador não encontrado.") from None
+            get_conector(seguradora).cadastrar_tomador(cnpj=tomador.cnpj)
+        except ErroSeguradora as e:
+            return self._traduzir_erro(e)
 
-        vinculo, _ = TomadorSeguradora.objects.get_or_create(
-            tomador=tomador, seguradora_id=seguradora_pk
-        )
-
-        # Prevenir solicitações duplicadas imediatas: verificar se já existe
-        # uma atividade de Criação para este vínculo.
-        from apps.atividades.models import Atividade
-        from apps.atividades.services import atividade_create
-
-        existe_atividade = Atividade.objects.filter(
-            entidade="TomadorSeguradora", object_id=vinculo.id, acao="Criação"
-        ).exists()
-
-        if existe_atividade:
-            serializer = TomadorSeguradoraSerializer(vinculo)
-            return Response(_envelope(serializer.data))
-
-        # Registrar atividade de solicitação
-        usuario = request.user if request.user.is_authenticated else None
+        # A atividade só é gravada depois do POST sair: registrar antes faria o
+        # histórico afirmar uma solicitação que pode nem ter acontecido.
         atividade_create(
-            usuario=usuario,
-            acao="Criação",
-            entidade="TomadorSeguradora",
-            object_id=vinculo.id,
-            item=str(vinculo),
-            detalhes="Solicitação de cadastro na Junto",
+            usuario=request.user if request.user.is_authenticated else None,
+            acao="ATUALIZAÇÃO",
+            entidade="Tomador",
+            object_id=tomador.id,
+            item=tomador.nome,
+            detalhes=f"{_DETALHE_SOLICITACAO} {seguradora.nome}",
         )
 
-        # Preparar payload mínimo para a Junto
-        dados = {
-            "cnpj": ''.join(filter(str.isdigit, tomador.cnpj or "")),
-            "nome": tomador.nome or tomador.nome_fantasia or "",
-            "email": tomador.email,
+        agora = timezone.now()
+        with transaction.atomic():
+            vinculo.junto_data_ultima_verificacao = agora
+            vinculo.save(
+                update_fields=["junto_data_ultima_verificacao", "atualizado_em"]
+            )
+
+        serializer = TomadorSeguradoraSerializer(vinculo)
+        return Response(
+            _envelope({**serializer.data, "pendente": True}),
+            status=status.HTTP_202_ACCEPTED,
+        )
+
+
+class TomadorSeguradoraJuntoConsultarTaxa(_JuntoViewBase):
+    """Consulta a taxa do tomador na Junto e registra no histórico.
+
+    Não grava a taxa nem cria vínculo: quem persiste continua sendo o
+    `PUT /api/v1/tomadores/{id}/seguradoras/` do "Salvar Taxas", para que exista
+    um caminho de escrita só.
+    """
+
+    def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
+        tomador, seguradora, erro = self._preparar(
+            tomador_pk, seguradora_pk, "consulta de taxa"
+        )
+        if erro is not None:
+            return erro
+
+        try:
+            taxa = get_conector(seguradora).consultar_taxa_tomador(cnpj=tomador.cnpj)
+        except ErroSeguradora as e:
+            return self._traduzir_erro(e)
+
+        if taxa is None:
+            return self._erro(
+                f"Este tomador não tem cadastro/limite na {seguradora.nome}.",
+                status.HTTP_404_NOT_FOUND,
+            )
+
+        if taxa.taxa >= Decimal("1000") or -taxa.taxa.as_tuple().exponent > 6:
+            # Arredondar calado é o que a precisão de 6 casas existe para evitar.
+            return self._erro(
+                f"Taxa fora da faixa suportada: {taxa.taxa}.",
+                status.HTTP_400_BAD_REQUEST,
+            )
+
+        resultado = {
+            "taxa": f"{taxa.taxa:f}",
+            "modalidade_id": str(taxa.modalidade_id),
+            "modalidade_descricao": taxa.modalidade_descricao,
+            "limite_disponivel": f"{taxa.limite_disponivel:f}",
+            "data_consulta": timezone.localtime().isoformat(),
+            "origem": "junto",
         }
 
-        from django.utils import timezone
-
-        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
-
-        try:
-            client = JuntoClient(vinculo.seguradora)
-            resp = client.solicitar_cadastro_tomador(dados)
-        except JuntoAPIError as e:
-            return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
-
-        # Se resposta indicar processamento, tentar consultar algumas vezes
-        processing = False
-        try:
-            status_val = resp.get("status") if isinstance(resp, dict) else None
-            if status_val and str(status_val).lower() in ("processing", "pendente"):
-                processing = True
-        except Exception:
-            processing = False
-
-        if processing:
-            # Poll por alguns segundos
-            import time
-
-            found = None
-            for _ in range(4):
-                time.sleep(1)
-                try:
-                    found = client.consultar_tomador(tomador.cnpj)
-                except JuntoAPIError:
-                    found = None
-                if found:
-                    break
-
-            vinculo.junto_data_ultima_verificacao = timezone.now()
-
-            if found:
-                # Atualiza validade e status
-                try:
-                    from datetime import date
-
-                    validade_str = found.get("validade")
-                    if validade_str:
-                        vinculo.junto_validade_cadastro = date.fromisoformat(validade_str)
-                except Exception:
-                    vinculo.junto_validade_cadastro = None
-
-                from django.utils.timezone import localdate
-
-                hoje = localdate()
-                if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
-                    vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
-                else:
-                    vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
-
-                vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
-                serializer = TomadorSeguradoraSerializer(vinculo)
-                return Response(_envelope(serializer.data))
-
-            # Ainda processando: manter sem cadastro e informar pendente
-            vinculo.junto_data_ultima_verificacao = timezone.now()
-            vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
-            serializer = TomadorSeguradoraSerializer(vinculo)
-            return Response(_envelope({**serializer.data, "pendente": True}))
-
-        # Se não estava em processamento (retorno imediato), tentar interpretar resposta
-        vinculo.junto_data_ultima_verificacao = timezone.now()
-        vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
-        serializer = TomadorSeguradoraSerializer(vinculo)
-        return Response(_envelope(serializer.data))
-
-
-class TomadorSeguradoraJuntoConsultarTaxa(APIView):
-    """Consulta a taxa do tomador na Junto e registra no histórico de atividades.
-
-    Este endpoint é EXCLUSIVAMENTE de leitura e NÃO altera nenhum dado no banco.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request: Request, tomador_pk: int, seguradora_pk: int) -> Response:
-        try:
-            tomador = selectors.tomador_get(pk=tomador_pk)
-        except Tomador.DoesNotExist:
-            raise NotFound(detail="Tomador não encontrado.") from None
-
-        vinculo, _ = TomadorSeguradora.objects.get_or_create(
-            tomador=tomador, seguradora_id=seguradora_pk
-        )
-
-        from apps.atividades.services import atividade_create
-        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
-
-        try:
-            client = JuntoClient(vinculo.seguradora)
-            resultado = client.consultar_limites_e_taxas(tomador.cnpj)
-        except JuntoAPIError as e:
-            return Response(_envelope({"error": str(e)}), status=status.HTTP_400_BAD_REQUEST)
-
-        # Registrar no histórico do tomador
-        usuario = request.user if request.user.is_authenticated else None
-        taxa_val = resultado.get("taxa")
-        mod_id = resultado.get("modalidade_id")
-        mod_desc = resultado.get("modalidade_descricao")
-
         atividade_create(
-            usuario=usuario,
-            acao="Consulta",
-            entidade="TomadorSeguradora",
-            object_id=vinculo.id,
-            item=str(vinculo),
-            detalhes=f"Taxa consultada na Junto: {taxa_val}% | Modalidade {mod_id} ({mod_desc})",
+            usuario=request.user if request.user.is_authenticated else None,
+            acao="ATUALIZAÇÃO",
+            entidade="Tomador",
+            object_id=tomador.id,
+            item=tomador.nome,
+            detalhes=(
+                f"Taxa {taxa.taxa}% consultada na {seguradora.nome} — "
+                f"modalidade {taxa.modalidade_id} ({taxa.modalidade_descricao})"
+            ),
         )
 
         return Response(_envelope(resultado))
-

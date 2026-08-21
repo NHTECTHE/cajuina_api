@@ -29,6 +29,8 @@ from .base import (
     RespostaMinuta,
     SeguradoJunto,
     SeguradoraIndisponivel,
+    TaxaTomador,
+    TomadorSeguradoraInfo,
 )
 
 logger = logging.getLogger(__name__)
@@ -221,11 +223,16 @@ class ConectorJunto:
         *,
         payload: dict | None = None,
         timeout: float | None = None,
+        tolerar: tuple[int, ...] = (),
     ):
         """Chamada de negócio. Um 401 renova o token e repete uma única vez.
 
         `timeout` permite que uma etapa lenta (a minuta) espere mais sem
         afrouxar o limite das rápidas.
+
+        `tolerar` lista os status 4xx que são resposta de negócio e voltam como
+        `Response` em vez de virar exceção. A consulta de tomador precisa disso:
+        a Junto responde "não localizado" com **400**, não com 404.
         """
         url = f"{self.base_url}{caminho}"
         resp = None
@@ -257,6 +264,8 @@ class ConectorJunto:
             raise SeguradoraIndisponivel("Não foi possível autenticar na seguradora.")
         if resp.status_code >= 500:
             raise SeguradoraIndisponivel(MSG_INDISPONIVEL)
+        if resp.status_code in tolerar:
+            return resp
         if resp.status_code >= 400:
             raise ErroValidacaoSeguradora(self._mensagem_erro(resp))
         return resp
@@ -435,6 +444,118 @@ class ConectorJunto:
         return criado
 
     # ─── Minuta ──────────────────────────────────────────────────────────────
+
+    # ─── Tomador ─────────────────────────────────────────────────────────────
+
+    # A Junto sinaliza "tomador fora da carteira" com 400 + este código, em vez
+    # de 404. Confirmado contra o sandbox em 2026-08-21.
+    ERRO_TOMADOR_NAO_LOCALIZADO = 1013
+
+    @classmethod
+    def _e_tomador_nao_localizado(cls, resp: httpx.Response) -> bool:
+        corpo = cls._corpo_bruto(resp)
+        if isinstance(corpo, list):
+            return any(
+                isinstance(item, dict)
+                and item.get("errorCode") == cls.ERRO_TOMADOR_NAO_LOCALIZADO
+                for item in corpo
+            )
+        return False
+
+    def consultar_tomador(self, *, cnpj: str) -> TomadorSeguradoraInfo | None:
+        """`None` significa uma coisa só: a Junto não conhece este CNPJ.
+
+        Rede, credencial e 5xx levantam exceção — quem chama precisa distinguir
+        "não tem cadastro" de "não deu para saber", senão a tela afirma que o
+        tomador não existe e oferece um cadastro que talvez já exista.
+        """
+        federal_id = so_digitos(cnpj)
+        if len(federal_id) != 14:
+            raise ErroValidacaoSeguradora("CNPJ inválido.")
+
+        resp = self._chamar(
+            "GET",
+            f"/guarantee/api/v2/policyholders/{federal_id}",
+            tolerar=(400, 404),
+        )
+        if resp.status_code == 404 or self._e_tomador_nao_localizado(resp):
+            return None
+        if resp.status_code >= 400:
+            # 400 por outro motivo continua sendo recusa de negócio.
+            raise ErroValidacaoSeguradora(self._mensagem_erro(resp))
+
+        corpo = self._corpo_decimal(resp)
+        if not isinstance(corpo, dict) or not corpo:
+            return None
+
+        return TomadorSeguradoraInfo(
+            cnpj=str(corpo.get("federalId") or federal_id),
+            nome=str(corpo.get("name") or ""),
+            cidade=str(corpo.get("city") or ""),
+            uf=str(corpo.get("state") or ""),
+            valido_ate=_parse_data(corpo.get("dateExpirationRegistration")),
+        )
+
+    def cadastrar_tomador(self, *, cnpj: str) -> None:
+        """Dispara o cadastro e volta; a Junto responde 202 e processa depois.
+
+        O único campo é o CNPJ: a Junto puxa razão social e endereço das fontes
+        dela. Quem confirma o resultado é `consultar_tomador`.
+        """
+        federal_id = so_digitos(cnpj)
+        if len(federal_id) != 14:
+            raise ErroValidacaoSeguradora("CNPJ inválido.")
+
+        self._chamar(
+            "POST",
+            "/guarantee/api/v2/policyholders",
+            payload={"federalId": federal_id},
+        )
+
+    def consultar_taxa_tomador(self, *, cnpj: str) -> TaxaTomador | None:
+        """Taxa da primeira modalidade que a Junto devolver.
+
+        A API não garante ordem, por isso a modalidade de origem é persistida e
+        exibida na tela — sem ela, `0.5` é um número sem procedência.
+
+        Sem fallback: se a Junto não responder, a exceção sobe. Inventar um
+        número aqui viraria prêmio real na cotação.
+        """
+        federal_id = so_digitos(cnpj)
+        if len(federal_id) != 14:
+            raise ErroValidacaoSeguradora("CNPJ inválido.")
+
+        resp = self._chamar(
+            "GET",
+            f"/guarantee/api/v2/policyholders/{federal_id}/limits",
+            tolerar=(400, 404),
+        )
+        if resp.status_code == 404 or self._e_tomador_nao_localizado(resp):
+            return None
+        if resp.status_code >= 400:
+            raise ErroValidacaoSeguradora(self._mensagem_erro(resp))
+
+        grupos = self._corpo_decimal(resp)
+        if not isinstance(grupos, list):
+            return None
+
+        for grupo in grupos:
+            if not isinstance(grupo, dict):
+                continue
+            for modalidade in grupo.get("modalities") or []:
+                if not isinstance(modalidade, dict):
+                    continue
+                if modalidade.get("rate") is None:
+                    continue
+                return TaxaTomador(
+                    taxa=_dec(modalidade.get("rate")),
+                    modalidade_id=int(modalidade.get("id") or 0),
+                    modalidade_descricao=str(modalidade.get("description") or ""),
+                    # Pode ser negativo quando o tomador estourou o limite; é
+                    # informação para a tela, não motivo para recusar a consulta.
+                    limite_disponivel=_dec(modalidade.get("limitAvailable")),
+                )
+        return None
 
     def listar_pendencias(self, *, document_number: str) -> list[Pendencia]:
         """Pendências que travam a liberação do PDF pela seguradora."""
