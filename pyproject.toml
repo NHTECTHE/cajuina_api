@@ -13,7 +13,6 @@ dependencies = [
     "pillow",
     # Cliente HTTP das integrações com seguradoras (apps/emissoes).
     "httpx",
-    "requests",
 ]
 
 [dependency-groups]

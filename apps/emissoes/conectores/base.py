@@ -120,6 +120,31 @@ class SeguradoJunto:
 
 
 @dataclass(frozen=True)
+class TomadorSeguradoraInfo:
+    """Cadastro do tomador do lado da seguradora.
+
+    `valido_ate` é a validade do cadastro: a Junto expira o cadastro do tomador e
+    um cadastro vencido não serve para emitir, então vale o mesmo que não ter.
+    """
+
+    cnpj: str
+    nome: str
+    cidade: str
+    uf: str
+    valido_ate: date | None
+
+
+@dataclass(frozen=True)
+class TaxaTomador:
+    """Taxa e limite de uma modalidade do tomador."""
+
+    taxa: Decimal
+    modalidade_id: int
+    modalidade_descricao: str
+    limite_disponivel: Decimal
+
+
+@dataclass(frozen=True)
 class Pendencia:
     codigo: int
     descricao: str
@@ -151,6 +176,12 @@ class ConectorSeguradora(Protocol):
     ) -> RespostaCotacao: ...
 
     def buscar_segurado(self, *, federal_id: str) -> SeguradoJunto | None: ...
+
+    def consultar_tomador(self, *, cnpj: str) -> TomadorSeguradoraInfo | None: ...
+
+    def cadastrar_tomador(self, *, cnpj: str) -> None: ...
+
+    def consultar_taxa_tomador(self, *, cnpj: str) -> TaxaTomador | None: ...
 
     def cadastrar_segurado(self, *, dados: DadosSegurado) -> SeguradoJunto: ...
 
