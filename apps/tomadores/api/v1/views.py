@@ -456,7 +456,6 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
 
         # Prevenir solicitações duplicadas imediatas: verificar se já existe
         # uma atividade de Criação para este vínculo.
-        from apps.atividades.models import Atividade
         from apps.atividades.services import atividade_create
 
         # Evita recadastrar quem já está com Cadastro OK, mas permite tentar novamente se deu erro antes
