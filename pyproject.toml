@@ -13,10 +13,11 @@ dependencies = [
     "pillow",
     # Cliente HTTP das integrações com seguradoras (apps/emissoes).
     "httpx",
+    "requests",
 ]
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest",
     # Pin de minor: pytest-django 4.13 usa `_pre_setup_ran_eagerly`, atributo que
     # so existe no Django 5.x, e nao declara esse limite no metadata dele. Em cima

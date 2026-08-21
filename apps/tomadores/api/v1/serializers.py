@@ -124,7 +124,13 @@ class TomadorSeguradoraSerializer(serializers.ModelSerializer):
             "seguradora_nome",
             "seguradora_ativo",
             "status",
+            "junto_data_ultima_verificacao",
+            "junto_validade_cadastro",
             "taxa",
+            "taxa_origem",
+            "taxa_junto_modalidade_id",
+            "taxa_junto_modalidade_descricao",
+            "taxa_data_atualizacao",
             "premio_minimo",
             "premio_minimo_efetivo",
             "dias_vencimento",
@@ -134,6 +140,26 @@ class TomadorSeguradoraSerializer(serializers.ModelSerializer):
             "atualizado_em",
         ]
         read_only_fields = ["id", "criado_em", "atualizado_em"]
+
+    def validate_taxa(self, value):
+        from decimal import Decimal
+        if value < 0:
+            raise serializers.ValidationError("Taxa não pode ser negativa.")
+        if value >= Decimal("1000"):
+            raise serializers.ValidationError("Taxa igual ou superior a 1000 não é permitida.")
+        parts = str(value).split(".")
+        if len(parts) > 1 and len(parts[1].rstrip("0")) > 6:
+            raise serializers.ValidationError("Taxa possui mais de 6 casas decimais e não pode ser arredondada ou truncada.")
+        return value
+
+    def validate(self, attrs):
+        origem = attrs.get("taxa_origem", "")
+        if origem != "junto":
+            attrs["taxa_origem"] = ""
+            attrs["taxa_junto_modalidade_id"] = ""
+            attrs["taxa_junto_modalidade_descricao"] = ""
+            attrs["taxa_data_atualizacao"] = None
+        return attrs
 
 
 class TomadorSeguradoraBulkSerializer(serializers.Serializer):
