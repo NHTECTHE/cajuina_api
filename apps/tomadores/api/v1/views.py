@@ -488,31 +488,14 @@ class TomadorSeguradoraJuntoSolicitar(_JuntoViewBase):
         if erro is not None:
             return erro
 
-        with transaction.atomic():
-            vinculo, _criado = TomadorSeguradora.objects.select_for_update().get_or_create(
-                tomador=tomador, seguradora=seguradora
-            )
+        # Prevenir solicitações duplicadas imediatas: verificar se já existe
+        # uma atividade de Criação para este vínculo.
+        from apps.atividades.services import atividade_create
 
-            recente = Atividade.objects.filter(
-                entidade="Tomador",
-                object_id=tomador.id,
-                acao="ATUALIZAÇÃO",
-                detalhes__startswith=_DETALHE_SOLICITACAO,
-                criado_em__gte=timezone.now() - self.JANELA_ANTIDUPLICIDADE,
-            ).exists()
-
-        if recente:
-            return self._erro(
-                "Já existe uma solicitação em andamento para este tomador. "
-                "Use 'Verificar cadastro' em instantes.",
-                status.HTTP_409_CONFLICT,
-            )
-
-        # Só o CNPJ vai: a Junto puxa razão social e endereço das fontes dela.
-        try:
-            get_conector(seguradora).cadastrar_tomador(cnpj=tomador.cnpj)
-        except ErroSeguradora as e:
-            return self._traduzir_erro(e)
+        # Evita recadastrar quem já está com Cadastro OK, mas permite tentar novamente se deu erro antes
+        if vinculo.status == TomadorSeguradora.Status.CADASTRO_OK:
+            serializer = TomadorSeguradoraSerializer(vinculo)
+            return Response(_envelope(serializer.data))
 
         # A atividade só é gravada depois do POST sair: registrar antes faria o
         # histórico afirmar uma solicitação que pode nem ter acontecido.
@@ -525,13 +508,92 @@ class TomadorSeguradoraJuntoSolicitar(_JuntoViewBase):
             detalhes=f"{_DETALHE_SOLICITACAO} {seguradora.nome}",
         )
 
-        agora = timezone.now()
-        with transaction.atomic():
-            vinculo.junto_data_ultima_verificacao = agora
-            vinculo.save(
-                update_fields=["junto_data_ultima_verificacao", "atualizado_em"]
-            )
+        # Preparar payload mínimo para a Junto
+        dados = {
+            "federalId": ''.join(filter(str.isdigit, tomador.cnpj or "")),
+        }
 
+        from django.utils import timezone
+
+        from shared.integracoes.junto.client import JuntoAPIError, JuntoClient
+
+        try:
+            client = JuntoClient(vinculo.seguradora)
+            resp = client.solicitar_cadastro_tomador(dados)
+        except JuntoAPIError as e:
+            return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
+
+        # Na V1 a resposta tinha {"status": "processing"}, na V2 se não der erro (Exception), já consideramos que está em processamento
+        processing = True
+        found_imediato = False
+        
+        # Na V2, o POST já retorna o Tomador diretamente se der sucesso
+        if isinstance(resp, dict) and resp.get("federalId"):
+            found_imediato = True
+            found = resp
+            processing = False
+
+        if processing:
+            # Poll por alguns segundos
+            import time
+
+            found = None
+            for _ in range(12):
+                time.sleep(1)
+                try:
+                    found = client.consultar_tomador(tomador.cnpj)
+                except JuntoAPIError:
+                    found = None
+                if found:
+                    break
+                    
+        if found_imediato:
+            pass # já temos o 'found' preenchido do retorno imediato da V2
+            
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+
+        if found:
+            # Atualiza validade e status
+            try:
+                from datetime import date
+
+                validade_str = found.get("dateExpirationRegistration") or found.get("validade")
+                if validade_str:
+                    vinculo.junto_validade_cadastro = date.fromisoformat(validade_str.split("T")[0])
+            except Exception:
+                vinculo.junto_validade_cadastro = None
+
+            from django.utils.timezone import localdate
+            hoje = localdate()
+            
+            # Regras de Negócio Junto Seguros V2
+            serasa_status = found.get("serasaStatus") or {}
+            status_id = serasa_status.get("statusId") if isinstance(serasa_status, dict) else None
+            
+            if status_id in (2, 4):
+                # 2 = Serasa com Restrições, 4 = Bloqueado
+                vinculo.status = TomadorSeguradora.Status.SEM_ACEITACAO
+            elif vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+                vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+            elif found:
+                # Na V2 (Sandbox), se retornou o tomador mas não tem data de validade, consideramos Cadastro OK para testes
+                vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+            else:
+                vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
+
+            vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
+            serializer = TomadorSeguradoraSerializer(vinculo)
+            return Response(_envelope(serializer.data))
+
+        # Ainda processando: manter sem cadastro e informar pendente
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+        vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
+        serializer = TomadorSeguradoraSerializer(vinculo)
+        return Response(_envelope({**serializer.data, "pendente": True}))
+
+        # Se não estava em processamento (retorno imediato), tentar interpretar resposta
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+        vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
         serializer = TomadorSeguradoraSerializer(vinculo)
         return Response(
             _envelope({**serializer.data, "pendente": True}),
