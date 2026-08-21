@@ -10,15 +10,16 @@ django.setup()
 from apps.seguradoras.models import Seguradora  # noqa: E402
 from shared.integracoes.junto.client import JuntoClient  # noqa: E402
 
-seg = Seguradora.objects.get(pk=4)
-client = JuntoClient(seg)
+if __name__ == '__main__':
+    seg = Seguradora.objects.get(pk=4)
+    client = JuntoClient(seg)
 
-dados = {"federalId": "07137727000164"}
-print("Sending:", dados)
-try:
-    response = client._request("POST", "/guarantee/api/v2/policyholders", json=dados)
-    print("Status:", response.status_code)
-    print("Response text:", response.text)
-except Exception:
-    import traceback
-    traceback.print_exc()
+    dados = {"federalId": "07137727000164"}
+    print("Sending:", dados)
+    try:
+        response = client._request("POST", "/guarantee/api/v2/policyholders", json=dados)
+        print("Status:", response.status_code)
+        print("Response text:", response.text)
+    except Exception:
+        import traceback
+        traceback.print_exc()
