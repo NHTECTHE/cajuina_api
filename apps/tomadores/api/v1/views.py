@@ -413,7 +413,18 @@ class TomadorSeguradoraJuntoVerificar(APIView):
         from django.utils.timezone import localdate
 
         hoje = localdate()
-        if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+        
+        # Regras de Negócio Junto Seguros V2
+        serasa_status = result.get("serasaStatus") or {}
+        status_id = serasa_status.get("statusId") if isinstance(serasa_status, dict) else None
+        
+        if status_id in (2, 4):
+            # 2 = Serasa com Restrições, 4 = Bloqueado
+            vinculo.status = TomadorSeguradora.Status.SEM_ACEITACAO
+        elif vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+            vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+        elif result:
+            # Na V2 (Sandbox), se retornou o tomador mas não tem data de validade, consideramos Cadastro OK para testes
             vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
         else:
             vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
@@ -448,11 +459,8 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
         from apps.atividades.models import Atividade
         from apps.atividades.services import atividade_create
 
-        existe_atividade = Atividade.objects.filter(
-            entidade="TomadorSeguradora", object_id=vinculo.id, acao="Criação"
-        ).exists()
-
-        if existe_atividade:
+        # Evita recadastrar quem já está com Cadastro OK, mas permite tentar novamente se deu erro antes
+        if vinculo.status == TomadorSeguradora.Status.CADASTRO_OK:
             serializer = TomadorSeguradoraSerializer(vinculo)
             return Response(_envelope(serializer.data))
 
@@ -469,9 +477,7 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
 
         # Preparar payload mínimo para a Junto
         dados = {
-            "cnpj": ''.join(filter(str.isdigit, tomador.cnpj or "")),
-            "nome": tomador.nome or tomador.nome_fantasia or "",
-            "email": tomador.email,
+            "federalId": ''.join(filter(str.isdigit, tomador.cnpj or "")),
         }
 
         from django.utils import timezone
@@ -484,13 +490,14 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
         except JuntoAPIError as e:
             return Response(_envelope({"error": str(e)}), status=status.HTTP_502_BAD_GATEWAY)
 
-        # Se resposta indicar processamento, tentar consultar algumas vezes
-        processing = False
-        try:
-            status_val = resp.get("status") if isinstance(resp, dict) else None
-            if status_val and str(status_val).lower() in ("processing", "pendente"):
-                processing = True
-        except Exception:
+        # Na V1 a resposta tinha {"status": "processing"}, na V2 se não der erro (Exception), já consideramos que está em processamento
+        processing = True
+        found_imediato = False
+        
+        # Na V2, o POST já retorna o Tomador diretamente se der sucesso
+        if isinstance(resp, dict) and resp.get("federalId"):
+            found_imediato = True
+            found = resp
             processing = False
 
         if processing:
@@ -498,7 +505,7 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
             import time
 
             found = None
-            for _ in range(4):
+            for _ in range(12):
                 time.sleep(1)
                 try:
                     found = client.consultar_tomador(tomador.cnpj)
@@ -506,37 +513,50 @@ class TomadorSeguradoraJuntoSolicitar(APIView):
                     found = None
                 if found:
                     break
+                    
+        if found_imediato:
+            pass # já temos o 'found' preenchido do retorno imediato da V2
+            
+        vinculo.junto_data_ultima_verificacao = timezone.now()
 
-            vinculo.junto_data_ultima_verificacao = timezone.now()
+        if found:
+            # Atualiza validade e status
+            try:
+                from datetime import date
 
-            if found:
-                # Atualiza validade e status
-                try:
-                    from datetime import date
+                validade_str = found.get("dateExpirationRegistration") or found.get("validade")
+                if validade_str:
+                    vinculo.junto_validade_cadastro = date.fromisoformat(validade_str.split("T")[0])
+            except Exception:
+                vinculo.junto_validade_cadastro = None
 
-                    validade_str = found.get("validade")
-                    if validade_str:
-                        vinculo.junto_validade_cadastro = date.fromisoformat(validade_str)
-                except Exception:
-                    vinculo.junto_validade_cadastro = None
+            from django.utils.timezone import localdate
+            hoje = localdate()
+            
+            # Regras de Negócio Junto Seguros V2
+            serasa_status = found.get("serasaStatus") or {}
+            status_id = serasa_status.get("statusId") if isinstance(serasa_status, dict) else None
+            
+            if status_id in (2, 4):
+                # 2 = Serasa com Restrições, 4 = Bloqueado
+                vinculo.status = TomadorSeguradora.Status.SEM_ACEITACAO
+            elif vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
+                vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+            elif found:
+                # Na V2 (Sandbox), se retornou o tomador mas não tem data de validade, consideramos Cadastro OK para testes
+                vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
+            else:
+                vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
 
-                from django.utils.timezone import localdate
-
-                hoje = localdate()
-                if vinculo.junto_validade_cadastro and vinculo.junto_validade_cadastro >= hoje:
-                    vinculo.status = TomadorSeguradora.Status.CADASTRO_OK
-                else:
-                    vinculo.status = TomadorSeguradora.Status.SEM_CADASTRO
-
-                vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
-                serializer = TomadorSeguradoraSerializer(vinculo)
-                return Response(_envelope(serializer.data))
-
-            # Ainda processando: manter sem cadastro e informar pendente
-            vinculo.junto_data_ultima_verificacao = timezone.now()
-            vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
+            vinculo.save(update_fields=["status", "junto_data_ultima_verificacao", "junto_validade_cadastro", "atualizado_em"])
             serializer = TomadorSeguradoraSerializer(vinculo)
-            return Response(_envelope({**serializer.data, "pendente": True}))
+            return Response(_envelope(serializer.data))
+
+        # Ainda processando: manter sem cadastro e informar pendente
+        vinculo.junto_data_ultima_verificacao = timezone.now()
+        vinculo.save(update_fields=["junto_data_ultima_verificacao", "atualizado_em"])
+        serializer = TomadorSeguradoraSerializer(vinculo)
+        return Response(_envelope({**serializer.data, "pendente": True}))
 
         # Se não estava em processamento (retorno imediato), tentar interpretar resposta
         vinculo.junto_data_ultima_verificacao = timezone.now()

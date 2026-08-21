@@ -13,10 +13,10 @@ class JuntoAPIError(Exception):
 
 
 class JuntoClient:
-    def __init__(self, seguradora):
+    def __init__(self, seguradora): 
         self.seguradora = seguradora
         self.base_url = getattr(
-            settings, "JUNTO_API_BASE_URL", "https://sandbox-api.juntoseguros.com"
+            settings, "JUNTO_API_BASE_URL", "https://ms-gateway-box.juntoseguros.com"
         )
         self.session = requests.Session()
 
@@ -36,12 +36,68 @@ class JuntoClient:
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        
+        # Autenticação V2 via .env ou banco de dados
+        import os
+        subscription_key = getattr(settings, "JUNTO_API_SUBSCRIPTION_KEY", os.environ.get("JUNTO_API_SUBSCRIPTION_KEY", ""))
+        client_id_env = os.environ.get("JUNTO_API_CLIENT_ID", "")
+        
+        if subscription_key:
+            self.headers["Ocp-Apim-Subscription-Key"] = subscription_key
+            
+        # Força o uso do Token V2 se a URL for ms-gateway ou se o client_id estiver no .env
+        if "ms-gateway" in self.base_url or client_id_env:
+            self.auth = None
+            
+        # Headers antigos caso ainda sejam necessários na V1
         if getattr(self.seguradora, "api_ou_name", None):
             self.headers["OUName"] = self.seguradora.api_ou_name
         if getattr(self.seguradora, "api_source_app", None):
             self.headers["SourceApp"] = self.seguradora.api_source_app
 
+    def _get_access_token(self):
+        """Busca o token Bearer da API V2 usando o clientId e clientSecret."""
+        endpoint = "/guarantee/api/v2/authentication"
+        url = f"{self.base_url}{endpoint}"
+        
+        # O clientId e clientSecret são pegos preferencialmente do .env, e depois do banco de dados
+        import os
+        client_id = os.environ.get("JUNTO_API_CLIENT_ID") or getattr(self.seguradora, "api_usuario", "") or getattr(self.seguradora, "api_client_id", "")
+        client_secret = os.environ.get("JUNTO_API_CLIENT_SECRET") or getattr(self.seguradora, "api_senha", "") or getattr(self.seguradora, "api_client_secret", "")
+        
+        payload = {
+            "clientId": client_id,
+            "clientSecret": client_secret
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        if "Ocp-Apim-Subscription-Key" in self.headers:
+            headers["Ocp-Apim-Subscription-Key"] = self.headers["Ocp-Apim-Subscription-Key"]
+            
+        try:
+            response = requests.post(url, json=payload, headers=headers)
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("accessToken")
+            else:
+                logger.error(f"Erro ao obter token da Junto: HTTP {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Falha de conexão ao obter token da Junto: {e}")
+            return None
+
     def _request(self, method, endpoint, **kwargs):
+        # Se estivermos na V2 (usando subscription key ou sem auth Basic) pegamos o token
+        if self.auth is None or "Ocp-Apim-Subscription-Key" in self.headers:
+            token = self._get_access_token()
+            if token:
+                self.headers["Authorization"] = f"Bearer {token}"
+            else:
+                raise JuntoAPIError("Não foi possível gerar o Token de Autenticação (Verifique o ClientId e ClientSecret).")
+                
         url = f"{self.base_url}{endpoint}"
         try:
             response = self.session.request(
@@ -49,7 +105,6 @@ class JuntoClient:
                 url=url,
                 auth=self.auth,
                 headers=self.headers,
-                timeout=10,
                 **kwargs,
             )
 
@@ -75,7 +130,7 @@ class JuntoClient:
             raise JuntoAPIError("Tempo de resposta da Junto excedido.") from e
         except requests.exceptions.RequestException as e:
             logger.error(f"Erro de conexão com a Junto: {str(e)}")
-            raise JuntoAPIError("Erro ao conectar com a Junto Seguros.") from e
+            raise JuntoAPIError(f"Erro ao conectar com a Junto Seguros: {str(e)}") from e
 
     def _clean_cnpj(self, cnpj: str) -> str:
         if not cnpj:
@@ -93,7 +148,7 @@ class JuntoClient:
         if not cnpj_limpo or len(cnpj_limpo) != 14:
             raise JuntoAPIError("CNPJ inválido fornecido para consulta.")
 
-        endpoint = f"/api/v1/tomadores/{cnpj_limpo}"
+        endpoint = f"/guarantee/api/v2/policyholders/{cnpj_limpo}"
         try:
             response = self._request("GET", endpoint)
         except JuntoAPIError as e:
@@ -117,7 +172,7 @@ class JuntoClient:
         if not cnpj_limpo or len(cnpj_limpo) != 14:
             raise JuntoAPIError("CNPJ inválido fornecido para consulta.")
 
-        endpoint = f"/api/v1/tomadores/{cnpj_limpo}/limites"
+        endpoint = f"/guarantee/api/v2/policyholders/{cnpj_limpo}/limits"
         try:
             response = self._request("GET", endpoint)
         except JuntoAPIError:
@@ -175,15 +230,27 @@ class JuntoClient:
 
     def solicitar_cadastro_tomador(self, dados_tomador: dict) -> dict:
         """Envia os dados do tomador para a Junto para solicitar o cadastro."""
-        endpoint = "/api/v1/tomadores"
+        endpoint = "/guarantee/api/v2/policyholders"
         try:
             response = self._request("POST", endpoint, json=dados_tomador)
-            if response.status_code in (200, 201, 202):
+            if response.status_code == 400:
                 try:
-                    return response.json()
-                except ValueError:
-                    return {"status": "processing"}
-            return {"status": "processing"}
+                    erros = response.json()
+                    if isinstance(erros, list):
+                        msg = ", ".join([str(e.get("message", "")) for e in erros if isinstance(e, dict) and "message" in e])
+                        if msg:
+                            raise JuntoAPIError(f"Erro da Junto: {msg}")
+                except Exception:
+                    pass
+                raise JuntoAPIError("Dados inválidos ou recusados pela Junto Seguros.")
+            
+            if response.status_code not in (200, 201, 202):
+                raise JuntoAPIError(f"Falha ao solicitar cadastro (HTTP {response.status_code})")
+                
+            try:
+                return response.json()
+            except ValueError:
+                return {"status": "processing"}
         except JuntoAPIError:
-            return {"status": "processing"}
+            raise
 
